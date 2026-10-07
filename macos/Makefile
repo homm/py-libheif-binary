@@ -70,6 +70,12 @@ set -euo pipefail; \
 source build/venv/bin/activate; \
 prefix="$(abspath $(basename $@))"; \
 stamp="$(abspath $@)"; \
+if [ -n "$(1)" ] && [ -f "$$stamp" ] && [ "$$(cat "$$stamp")" = "$(1)" ]; then \
+	printf '\n%s\n' "Skipping $(notdir $(basename $@)): SHA256 matches the .done file"; \
+	exit 0; \
+fi; \
+printf '\n########################\n%s\n########################\n' \
+	"Compiling $(notdir $(basename $@))"; \
 rm -f "$$stamp"; \
 rm -rf "$$prefix"; \
 work=$$(mktemp -d); \
@@ -79,7 +85,7 @@ cd "$$work";
 endef
 
 build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(X264_SHA256)) \
 	grep -q '^#define X264_BUILD $(X264_BUILD)$$' x264.h; \
 	./configure \
 		--prefix="$$prefix" \
@@ -95,7 +101,7 @@ build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/
 	printf '%s\n' "$(X264_SHA256)" > "$$stamp"
 
 build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(X265_SHA256)) \
 	cmake -S source -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
@@ -108,7 +114,7 @@ build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | buil
 	printf '%s\n' "$(X265_SHA256)" > "$$stamp"
 
 build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(DE265_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
@@ -123,7 +129,7 @@ build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | 
 	printf '%s\n' "$(DE265_SHA256)" > "$$stamp"
 
 build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(AOM_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
@@ -142,7 +148,7 @@ build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/ve
 	printf '%s\n' "$(AOM_SHA256)" > "$$stamp"
 
 build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv.tar.gz ../versions/sharpyuv.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(WEBP_SHA256)) \
 	./configure \
 		--prefix="$$prefix" \
 		--libdir="$$prefix/lib" \
@@ -156,7 +162,7 @@ build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv.tar.gz ../versions/sharpyu
 	printf '%s\n' "$(WEBP_SHA256)" > "$$stamp"
 
 build/libpng-$(LIBPNG_VERSION).done: sources/libpng.tar.gz ../versions/libpng.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(LIBPNG_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
@@ -172,7 +178,7 @@ build/libpng-$(LIBPNG_VERSION).done: sources/libpng.tar.gz ../versions/libpng.en
 	printf '%s\n' "$(LIBPNG_SHA256)" > "$$stamp"
 
 build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpeg.env | build/venv
-	$(prepare) \
+	@$(call prepare,$(LIBJPEG_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
@@ -196,8 +202,8 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
         build/sharpyuv-$(WEBP_VERSION).done \
         build/libpng-$(LIBPNG_VERSION).done \
         build/libjpeg-$(LIBJPEG_VERSION).done | build/venv
+	@$(prepare) \
 	build="$(abspath build)"; \
-	$(prepare) \
 	cmake --preset=release-noplugins -S . -B build \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
@@ -229,7 +235,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	target=build/wheel/libheif_binary; \
 	rm -rf build/wheel; \
 	mkdir -p build/wheel; \
-	cp ../pyproject.toml ../setup.py build/wheel/; \
+	cp ../pyproject.toml ../setup.py ../README.md build/wheel/; \
 	cp -r ../libheif_binary build/wheel/; \
 	mkdir -p $$target/bin $$target/licenses; \
 	sed -n 's/^#define LIBHEIF_VERSION "\([^" ]*\)"/\1/p' \

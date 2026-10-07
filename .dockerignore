@@ -2,5 +2,6 @@
 !versions/
 !pyproject.toml
 !setup.py
+!README.md
 !libheif_binary/
 !tests/

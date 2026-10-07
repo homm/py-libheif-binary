@@ -210,7 +210,7 @@ RUN cmake --build . -j $(nproc) \
 COPY --from=build-patchelf /usr/local/bin/lief-patchelf /usr/local/bin/
 
 WORKDIR /package
-COPY pyproject.toml setup.py ./
+COPY pyproject.toml setup.py README.md ./
 COPY libheif_binary ./libheif_binary
 
 RUN sed -n 's/^#define LIBHEIF_VERSION "\([^"]*\)"/\1/p' \
