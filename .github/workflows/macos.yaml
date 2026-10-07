@@ -1,0 +1,89 @@
+name: macOS wheels
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Build and test wheel
+        run: make -C macos
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  merge:
+    name: Merge universal2 wheel
+    needs: build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          path: wheels
+          merge-multiple: true
+
+      - name: Install delocate
+        run: |
+          source macos/venv.env
+          python -m pip install "delocate==$DELOCATE_VERSION"
+
+      - name: Merge wheels
+        run: delocate-merge -w dist wheels/*.whl
+
+      - name: Verify universal2 wheel
+        run: |
+          set -- dist/*.whl
+          test "$#" -eq 1
+          [[ "$1" == *-py3-none-macosx_*_universal2.whl ]]
+          unzip -q "$1" -d "$RUNNER_TEMP/universal2"
+          for binary in "$RUNNER_TEMP/universal2/libheif_binary"/{bin,lib}/*; do
+            lipo -verify_arch x86_64 arm64 "$binary"
+            codesign --verify --strict "$binary"
+          done
+
+      - name: Install and test merged wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/merged-venv"
+          source "$RUNNER_TEMP/merged-venv/bin/activate"
+          python -m pip install dist/*.whl
+          cd "$RUNNER_TEMP"
+          python -c 'from libheif_binary import load_library; load_library()'
+          heif-enc --help
+          heif-dec --help
+          heif-info --help
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal2
+          path: dist/*.whl
+          if-no-files-found: error

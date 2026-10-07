@@ -2,6 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := wheel
 .DELETE_ON_ERROR:
 
+export MACOSX_DEPLOYMENT_TARGET := 11.0
 include ../versions/*.env venv.env
 
 JOBS := $(shell sysctl -n hw.ncpu)
