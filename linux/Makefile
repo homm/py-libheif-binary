@@ -1,8 +1,8 @@
 BASE ?= manylinux
-PLATFORM ?=
+ARCH ?=
 TARGET ?= wheel
 
-BUILD_ARGS = $(if $(PLATFORM),--platform=$(PLATFORM))
+BUILD_ARGS = $(if $(ARCH),--platform=linux/$(ARCH))
 BUILD_ARGS += --build-arg BASE=$(BASE) --tag libheif-binary:$(BASE)-$(TARGET)
 ifeq ($(TARGET),wheel)
 BUILD_ARGS += --load --output type=local,dest=../dist

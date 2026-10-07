@@ -18,8 +18,8 @@ The wheel is saved in `dist/`. Install it with:
 python -m pip install dist/*.whl
 ```
 
-To build for a specific architecture, pass `PLATFORM=linux/amd64` or
-`PLATFORM=linux/arm64` to make.
+To build for a specific architecture, pass `ARCH=amd64` or
+`ARCH=arm64` to make.
 
 To run the CLI tools without starting Python first, replace their wrappers with
 symlinks in the installed environment:
