@@ -8,7 +8,7 @@ include ../versions/*.env venv.env
 JOBS := $(shell sysctl -n hw.ncpu)
 
 .PHONY: libs x264 x265 de265 aom sharpyuv libpng libjpeg libheif
-libs: x264 x265 de265 aom sharpyuv libpng libjpeg
+libs: x265 de265 aom sharpyuv libpng libjpeg
 x264: build/x264-$(X264_BUILD).done
 x265: build/x265-$(X265_VERSION).done
 de265: build/de265-$(DE265_VERSION).done
@@ -195,7 +195,6 @@ build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpe
 	printf '%s\n' "$(LIBJPEG_SHA256)" > "$$stamp"
 
 build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libheif.env \
-        build/x264-$(X264_BUILD).done \
         build/x265-$(X265_VERSION).done \
         build/de265-$(DE265_VERSION).done \
         build/aom-$(AOM_VERSION).done \
@@ -207,16 +206,16 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 	cmake --preset=release-noplugins -S . -B build \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
-		-DCMAKE_PREFIX_PATH="$$build/x264-$(X264_BUILD);$$build/x265-$(X265_VERSION);$$build/de265-$(DE265_VERSION);$$build/aom-$(AOM_VERSION);$$build/sharpyuv-$(WEBP_VERSION);$$build/libpng-$(LIBPNG_VERSION);$$build/libjpeg-$(LIBJPEG_VERSION)" \
+		-DCMAKE_PREFIX_PATH="$$build/x265-$(X265_VERSION);$$build/de265-$(DE265_VERSION);$$build/aom-$(AOM_VERSION);$$build/sharpyuv-$(WEBP_VERSION);$$build/libpng-$(LIBPNG_VERSION);$$build/libjpeg-$(LIBJPEG_VERSION)" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
-		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
+		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
+		-DWITH_GDK_PIXBUF=OFF \
 		-DCMAKE_INCLUDE_PATH="$$build/sharpyuv-$(WEBP_VERSION)/include/webp" \
-		-DWITH_EXAMPLE_HEIF_THUMB=OFF 2>&1 | tee _configure.log; \
+		2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
 	grep -q 'Found libsharpyuv:' _configure.log; \
-	grep -q "'x264' as built-in backend" _configure.log; \
 	grep -q "'x265' as built-in backend" _configure.log; \
 	grep -q "'libde265' as built-in backend" _configure.log; \
 	grep -q "'aomdec' as built-in backend" _configure.log; \
@@ -241,7 +240,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	sed -n 's/^#define LIBHEIF_VERSION "\([^" ]*\)"/\1/p' \
 		$$build/include/libheif/heif_version.h > $$target/LIBVERSION; \
 	test -s $$target/LIBVERSION; \
-	for prefix in build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
+	for prefix in build/x265-$(X265_VERSION) \
 		build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
 		build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
 		build/libjpeg-$(LIBJPEG_VERSION) $$build; do \
@@ -255,7 +254,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	platform=$$(python -c 'import platform, sysconfig; print(sysconfig.get_platform().rsplit("-", 1)[0] + "-" + platform.machine())'); \
 	pip wheel ./build/wheel -w build/wheel \
 		--config-settings=--build-option=--plat-name="$$platform"; \
-	DYLD_LIBRARY_PATH="build/libheif-$(LIBHEIF_VERSION)/lib:build/x264-$(X264_BUILD)/lib:build/x265-$(X265_VERSION)/lib:build/de265-$(DE265_VERSION)/lib:build/aom-$(AOM_VERSION)/lib:build/sharpyuv-$(WEBP_VERSION)/lib:build/libpng-$(LIBPNG_VERSION)/lib:build/libjpeg-$(LIBJPEG_VERSION)/lib" \
+	DYLD_LIBRARY_PATH="build/libheif-$(LIBHEIF_VERSION)/lib:build/x265-$(X265_VERSION)/lib:build/de265-$(DE265_VERSION)/lib:build/aom-$(AOM_VERSION)/lib:build/sharpyuv-$(WEBP_VERSION)/lib:build/libpng-$(LIBPNG_VERSION)/lib:build/libjpeg-$(LIBJPEG_VERSION)/lib" \
 		delocate-wheel -L lib build/wheel/*.whl
 
 	# Restore the stable libheif install ID and repack
