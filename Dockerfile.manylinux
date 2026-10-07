@@ -236,15 +236,18 @@ RUN pip wheel --no-deps . -w /unrepaired \
 # -------------------------------- tested ----------------------------------------------
 FROM ${BASE}-image AS tested
 
+ARG BASE
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 WORKDIR /tmp
 COPY --from=build-libheif /wheelhouse/ /wheelhouse/
 COPY tests/smoke.py /tmp/smoke.py
 COPY --from=build-libheif /src/examples/example.heic /tmp/example.heic
 
-RUN for version in cp39-cp39 cp314-cp314 cp314-cp314t; do \
+RUN interpreters=(/opt/python/cp39-cp39 /opt/python/cp314-cp314 /opt/python/cp314-cp314t) \
+    && if [ "$BASE" = manylinux ]; then interpreters+=(/opt/python/pp*); fi \
+    && for interpreter in "${interpreters[@]}"; do \
         ( \
-            export PATH="/opt/python/$version/bin:$PATH"; \
+            export PATH="$interpreter/bin:$PATH"; \
             pip install /wheelhouse/*.whl; \
             python /tmp/smoke.py /tmp/example.heic; \
         ); \

@@ -15,10 +15,10 @@ package = Path(libheif_binary.__file__).resolve().parent
 lib = libheif_binary.load_library()
 other = libheif_binary.load_library()
 assert other is not lib
-assert other._handle == lib._handle
+assert ctypes.cast(other.heif_get_version, ctypes.c_void_p).value == ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value
 resident = ctypes.CDLL("libheif.so.1", mode=os.RTLD_NOLOAD | os.RTLD_NOW)
 bundled = ctypes.CDLL(str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW)
-assert resident._handle == bundled._handle
+assert ctypes.cast(resident.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
 lib.heif_get_version.restype = ctypes.c_char_p
 assert lib.heif_get_version().decode() == (package / "LIBVERSION").read_text().strip()
 
