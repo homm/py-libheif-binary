@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "libheif_binary"
+dynamic = ["version"]
+description = "Prebuilt libheif, codecs and command-line tools"
+requires-python = ">=3.9"
+
+[project.scripts]
+heif-enc = "libheif_binary:heif_enc"
+heif-dec = "libheif_binary:heif_dec"
+heif-info = "libheif_binary:heif_info"
+libheif-link-cli = "libheif_binary:link_cli"
+
+[tool.setuptools]
+packages = ["libheif_binary"]
+
+[tool.setuptools.package-data]
+libheif_binary = ["bin/*", "lib/*", "licenses/*", "LIBVERSION"]

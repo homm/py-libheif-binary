@@ -1,0 +1,220 @@
+# -------------------------------- build-base ------------------------------------------
+FROM quay.io/pypa/manylinux_2_28:2026.10.03-1 AS build-base
+
+ARG TARGETARCH
+ENV PATH="/opt/python/cp314-cp314/bin:${PATH}"
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+WORKDIR /build/src
+
+RUN --mount=type=cache,id=manylinux-2-28-dnf-${TARGETARCH},target=/var/cache/dnf,sharing=locked \
+    dnf install -y --setopt=keepcache=True \
+        nasm libpng-devel libjpeg-turbo-devel
+
+
+# -------------------------------- build-x264 ------------------------------------------
+FROM build-base AS build-x264
+
+ENV X264_COMMIT="0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee"
+ENV X264_SHA256="d0967a1348c85dfde363bb52610403be898171493100561efa0dd05d5fd1ae50"
+
+RUN curl -fL "https://code.videolan.org/videolan/x264/-/archive/${X264_COMMIT}/x264-${X264_COMMIT}.tar.gz" -o ../x264.tar.gz \
+    && echo "${X264_SHA256} *../x264.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../x264.tar.gz --strip-components=1 \
+    && grep -q '^#define X264_BUILD 165$' x264.h \
+    && ./configure \
+        --prefix=/usr/local \
+        --libdir=/usr/local/lib \
+        --enable-shared \
+        --enable-pic \
+        --disable-cli \
+        --disable-opencl \
+    && make -j $(nproc) \
+    && make install DESTDIR=/opt \
+    && install -D COPYING /opt/usr/local/share/licenses/x264-COPYING \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-x265 ------------------------------------------
+FROM build-base AS build-x265
+
+ENV X265_VERSION="4.2"
+ENV X265_SHA256="40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210"
+
+RUN curl -fL "https://bitbucket.org/multicoreware/x265_git/downloads/x265_${X265_VERSION}.tar.gz" -o ../x265.tar.gz \
+    && echo "${X265_SHA256} *../x265.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../x265.tar.gz --strip-components=1 \
+    && cmake -S source -B ../build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DENABLE_CLI=OFF \
+    && cmake --build ../build -j $(nproc) \
+    && DESTDIR=/opt cmake --install ../build \
+    && install -D COPYING /opt/usr/local/share/licenses/x265-COPYING \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-de265 -----------------------------------------
+FROM build-base AS build-de265
+
+ENV DE265_VERSION="1.1.3"
+ENV DE265_SHA256="554228bd17788c99a7e63b37ab5634722190e6e2bf60c1dcb01cef328e133905"
+
+RUN curl -fL "https://github.com/strukturag/libde265/releases/download/v${DE265_VERSION}/libde265-${DE265_VERSION}.tar.gz" -o ../libde265.tar.gz \
+    && echo "${DE265_SHA256} *../libde265.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../libde265.tar.gz --strip-components=1 \
+    && cmake -B ../build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DENABLE_ENCODER=OFF \
+        -DENABLE_DECODER=OFF \
+        -DENABLE_SHERLOCK265=OFF \
+    && cmake --build ../build -j $(nproc) \
+    && DESTDIR=/opt cmake --install ../build \
+    && install -D COPYING /opt/usr/local/share/licenses/libde265-COPYING \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-aom -------------------------------------------
+FROM build-base AS build-aom
+
+ENV AOM_VERSION="3.15.1"
+ENV AOM_SHA256="8ca0c52746174603500f0adb6f2a215d69c9ca2aab2acb3caa06fb791d8d01bf"
+
+RUN curl -fL "https://storage.googleapis.com/aom-releases/libaom-${AOM_VERSION}.tar.gz" -o ../aom.tar.gz \
+    && echo "${AOM_SHA256} *../aom.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../aom.tar.gz --strip-components=1 \
+    && cmake -B ../build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DBUILD_SHARED_LIBS=ON \
+        -DENABLE_TESTS=OFF \
+        -DENABLE_APPS=OFF \
+        -DENABLE_TOOLS=OFF \
+        -DENABLE_EXAMPLES=OFF \
+        -DENABLE_DOCS=OFF \
+    && cmake --build ../build -j $(nproc) \
+    && DESTDIR=/opt cmake --install ../build \
+    && install -D LICENSE /opt/usr/local/share/licenses/aom-LICENSE \
+    && install -D PATENTS /opt/usr/local/share/licenses/aom-PATENTS \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-sharpyuv --------------------------------------
+FROM build-base AS build-sharpyuv
+
+ENV WEBP_VERSION="1.6.0"
+ENV WEBP_SHA256="e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564"
+
+RUN curl -fL "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz" -o ../libwebp.tar.gz \
+    && echo "${WEBP_SHA256} *../libwebp.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../libwebp.tar.gz --strip-components=1 \
+    && ./autogen.sh \
+    && ./configure \
+        --prefix=/usr/local \
+        --libdir=/usr/local/lib \
+        --disable-everything \
+        --disable-shared \
+        --disable-threading \
+    && make -C sharpyuv -j $(nproc) CFLAGS='-fPIC' install DESTDIR=/opt \
+    && install -D COPYING /opt/usr/local/share/licenses/libwebp-COPYING \
+    && install -D PATENTS /opt/usr/local/share/licenses/libwebp-PATENTS \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-libheif ---------------------------------------
+FROM build-base AS build-libheif
+
+COPY --from=build-x264 /opt/usr/local/ /usr/local/
+COPY --from=build-x265 /opt/usr/local/ /usr/local/
+COPY --from=build-de265 /opt/usr/local/ /usr/local/
+COPY --from=build-aom /opt/usr/local/ /usr/local/
+COPY --from=build-sharpyuv /opt/usr/local/ /usr/local/
+RUN ldconfig
+
+ENV LIBHEIF_VERSION="1.23.6"
+ENV LIBHEIF_SHA256="c9a00b0452f5c16d72ef71e5e40c0e90fbe2ad37148d27a1b2f9bb21546f5f03"
+
+RUN curl -fL "https://github.com/strukturag/libheif/archive/v${LIBHEIF_VERSION}.tar.gz" -o ../libheif.tar.gz \
+    && echo "${LIBHEIF_SHA256} *../libheif.tar.gz" | sha256sum -c - \
+    && mkdir -p /src \
+    && tar xf ../libheif.tar.gz --strip-components=1 -C /src \
+    && rm -rf /build/*
+WORKDIR /src/build
+
+RUN cmake --preset=release-noplugins \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWITH_EXAMPLE_HEIF_THUMB=OFF \
+        .. 2>&1 | tee _configure.log \
+    && grep -q 'Found PNG:' _configure.log \
+    && grep -q 'Found JPEG:' _configure.log \
+    && grep -q 'Found libsharpyuv:' _configure.log \
+    && grep -q "'x264' as built-in backend" _configure.log \
+    && grep -q "'x265' as built-in backend" _configure.log \
+    && grep -q "'libde265' as built-in backend" _configure.log \
+    && grep -q "'aomdec' as built-in backend" _configure.log \
+    && grep -q "'aomenc' as built-in backend" _configure.log
+
+RUN cmake --build . -j $(nproc) \
+    && cmake --install . \
+    && install -D ../COPYING /usr/local/share/licenses/libheif-COPYING
+
+
+WORKDIR /package
+COPY pyproject.toml setup.py ./
+COPY libheif_binary ./libheif_binary
+
+RUN mkdir -p libheif_binary/bin libheif_binary/lib \
+    && cp -r /usr/local/share/licenses libheif_binary/licenses \
+    && cp /usr/local/bin/heif-enc /usr/local/bin/heif-dec /usr/local/bin/heif-info libheif_binary/bin/ \
+    && cp -L /usr/local/lib/libheif.so.1 libheif_binary/lib/ \
+    && for executable in libheif_binary/bin/*; do \
+        patchelf --set-rpath '$ORIGIN/../lib' "$executable"; \
+    done \
+    && sed -n 's/^#define LIBHEIF_VERSION "\([^"]*\)"/\1/p' \
+        /usr/local/include/libheif/heif_version.h > libheif_binary/LIBVERSION \
+    && test -s libheif_binary/LIBVERSION \
+    && python -m pip install setuptools==80.9.0 wheel==0.45.1 \
+    && python -m pip wheel --no-deps --no-build-isolation . -w /unrepaired \
+    && auditwheel repair --lib-sdir /lib --plat "manylinux_2_28_$(uname -m)" -w /wheelhouse /unrepaired/*.whl \
+    && rm -r /unrepaired \
+    && auditwheel show /wheelhouse/*.whl
+
+
+# -------------------------------- tested ----------------------------------------------
+FROM quay.io/pypa/manylinux_2_28:2026.10.03-1 AS tested
+
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+WORKDIR /tmp
+COPY --from=build-libheif /wheelhouse/ /wheelhouse/
+COPY tests/smoke.py /tmp/smoke.py
+COPY --from=build-libheif /src/examples/example.heic /tmp/example.heic
+
+RUN for version in cp39-cp39 cp314-cp314; do \
+        /opt/python/$version/bin/python -m venv /tmp/$version; \
+        /tmp/$version/bin/python -m pip install --no-deps /wheelhouse/*.whl; \
+        PATH="/tmp/$version/bin:$PATH" /tmp/$version/bin/python /tmp/smoke.py /tmp/example.heic; \
+        readelf -d /tmp/$version/lib/python*/site-packages/libheif_binary/lib/libheif.so.1 | grep 'SONAME.*\[libheif.so.1\]'; \
+        for library in /tmp/$version/lib/python*/site-packages/libheif_binary/lib/*; do \
+            ldd "$library" > /tmp/ldd.log; \
+            if grep -q 'not found' /tmp/ldd.log; then cat /tmp/ldd.log; exit 1; fi; \
+        done; \
+    done
+
+
+# -------------------------------- wheel export ----------------------------------------
+FROM scratch AS wheel
+COPY --from=tested /wheelhouse/ /
