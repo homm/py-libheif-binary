@@ -7,7 +7,8 @@ include ../versions/*.env venv.env
 
 JOBS := $(shell sysctl -n hw.ncpu)
 
-.PHONY: x264 x265 de265 aom sharpyuv libpng libjpeg libheif
+.PHONY: libs x264 x265 de265 aom sharpyuv libpng libjpeg libheif
+libs: x264 x265 de265 aom sharpyuv libpng libjpeg
 x264: build/x264-$(X264_BUILD).done
 x265: build/x265-$(X265_VERSION).done
 de265: build/de265-$(DE265_VERSION).done

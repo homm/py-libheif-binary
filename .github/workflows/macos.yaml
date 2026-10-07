@@ -2,7 +2,9 @@ name: macOS wheels
 
 on:
   workflow_dispatch:
-  pull_request:
+  push:
+    tags:
+      - 'v[0-9]*'
 
 permissions:
   contents: read
@@ -26,8 +28,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Build dependencies
+        run: make -C macos libs
+
+      - name: Build libheif
+        run: make -C macos libheif
+
       - name: Build and test wheel
-        run: make -C macos
+        run: make -C macos wheel
 
       - uses: actions/upload-artifact@v4
         with:
