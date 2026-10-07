@@ -249,7 +249,6 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif-$(LIBHEIF_VERSION).tar.gz
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
 		-DWITH_JPEG_ENCODER=ON \
 		-DWITH_JPEG_DECODER=ON \
-		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
 		. 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \

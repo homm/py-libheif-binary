@@ -265,7 +265,6 @@ RUN cmake --preset=release-noplugins \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_JPEG_ENCODER=ON \
         -DWITH_JPEG_DECODER=ON \
-        -DWITH_EXAMPLE_HEIF_VIEW=OFF \
         .. 2>&1 | tee _configure.log \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
