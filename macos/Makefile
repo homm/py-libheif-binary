@@ -202,6 +202,9 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DCMAKE_PREFIX_PATH="$$build/x264-$(X264_BUILD);$$build/x265-$(X265_VERSION);$$build/de265-$(DE265_VERSION);$$build/aom-$(AOM_VERSION);$$build/sharpyuv-$(WEBP_VERSION);$$build/libpng-$(LIBPNG_VERSION);$$build/libjpeg-$(LIBJPEG_VERSION)" \
+		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
+		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
+		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
 		-DCMAKE_INCLUDE_PATH="$$build/sharpyuv-$(WEBP_VERSION)/include/webp" \
 		-DWITH_EXAMPLE_HEIF_THUMB=OFF 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \

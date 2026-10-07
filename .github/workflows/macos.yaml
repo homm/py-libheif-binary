@@ -2,6 +2,7 @@ name: macOS wheels
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     tags:
       - 'v[0-9]*'
@@ -75,7 +76,7 @@ jobs:
           [[ "$1" == *-py3-none-macosx_*_universal2.whl ]]
           unzip -q "$1" -d "$RUNNER_TEMP/universal2"
           for binary in "$RUNNER_TEMP/universal2/libheif_binary"/{bin,lib}/*; do
-            lipo -verify_arch x86_64 arm64 "$binary"
+            lipo "$binary" -verify_arch x86_64 arm64
             codesign --verify --strict "$binary"
           done
 
