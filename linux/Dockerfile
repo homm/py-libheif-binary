@@ -47,15 +47,16 @@ RUN case "$(uname -m)" in \
 # -------------------------------- build-x264 ------------------------------------------
 FROM build-base AS build-x264
 
-ENV X264_COMMIT="0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee"
-ENV X264_SHA256="d0967a1348c85dfde363bb52610403be898171493100561efa0dd05d5fd1ae50"
+COPY versions/x264.env /build/x264.env
 
-RUN curl -fL "https://code.videolan.org/videolan/x264/-/archive/${X264_COMMIT}/x264-${X264_COMMIT}.tar.gz" -o ../x264.tar.gz \
-    && echo "${X264_SHA256} *../x264.tar.gz" | sha256sum -c -
+RUN . /build/x264.env \
+    && curl -fL "${X264_URL}" -o ../x264.tar.gz \
+    && echo "${X264_SHA256} *../x264.tar.gz" | sha256sum -c - \
+    && tar -xOf ../x264.tar.gz "x264-${X264_COMMIT}/x264.h" \
+        | grep "^#define X264_BUILD ${X264_BUILD}$"
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
     tar xf ../x264.tar.gz --strip-components=1 \
-    && grep -q '^#define X264_BUILD 165$' x264.h \
     && ./configure \
         --prefix=/usr/local \
         --libdir=/usr/local/lib \
@@ -72,10 +73,10 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-x265 ------------------------------------------
 FROM build-base AS build-x265
 
-ENV X265_VERSION="4.2"
-ENV X265_SHA256="40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210"
+COPY versions/x265.env /build/x265.env
 
-RUN curl -fL "https://bitbucket.org/multicoreware/x265_git/downloads/x265_${X265_VERSION}.tar.gz" -o ../x265.tar.gz \
+RUN . /build/x265.env \
+    && curl -fL "${X265_URL}" -o ../x265.tar.gz \
     && echo "${X265_SHA256} *../x265.tar.gz" | sha256sum -c -
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
@@ -94,10 +95,10 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-de265 -----------------------------------------
 FROM build-base AS build-de265
 
-ENV DE265_VERSION="1.1.3"
-ENV DE265_SHA256="554228bd17788c99a7e63b37ab5634722190e6e2bf60c1dcb01cef328e133905"
+COPY versions/de265.env /build/de265.env
 
-RUN curl -fL "https://github.com/strukturag/libde265/releases/download/v${DE265_VERSION}/libde265-${DE265_VERSION}.tar.gz" -o ../libde265.tar.gz \
+RUN . /build/de265.env \
+    && curl -fL "${DE265_URL}" -o ../libde265.tar.gz \
     && echo "${DE265_SHA256} *../libde265.tar.gz" | sha256sum -c -
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
@@ -118,10 +119,10 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-aom -------------------------------------------
 FROM build-base AS build-aom
 
-ENV AOM_VERSION="3.15.1"
-ENV AOM_SHA256="8ca0c52746174603500f0adb6f2a215d69c9ca2aab2acb3caa06fb791d8d01bf"
+COPY versions/aom.env /build/aom.env
 
-RUN curl -fL "https://storage.googleapis.com/aom-releases/libaom-${AOM_VERSION}.tar.gz" -o ../aom.tar.gz \
+RUN . /build/aom.env \
+    && curl -fL "${AOM_URL}" -o ../aom.tar.gz \
     && echo "${AOM_SHA256} *../aom.tar.gz" | sha256sum -c -
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
@@ -146,10 +147,10 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-sharpyuv --------------------------------------
 FROM build-base AS build-sharpyuv
 
-ENV WEBP_VERSION="1.6.0"
-ENV WEBP_SHA256="e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564"
+COPY versions/sharpyuv.env /build/sharpyuv.env
 
-RUN curl -fL "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz" -o ../libwebp.tar.gz \
+RUN . /build/sharpyuv.env \
+    && curl -fL "${WEBP_URL}" -o ../libwebp.tar.gz \
     && echo "${WEBP_SHA256} *../libwebp.tar.gz" | sha256sum -c -
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
@@ -170,10 +171,10 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-libheif ---------------------------------------
 FROM build-base AS build-libheif
 
-ENV LIBHEIF_VERSION="1.23.6"
-ENV LIBHEIF_SHA256="c9a00b0452f5c16d72ef71e5e40c0e90fbe2ad37148d27a1b2f9bb21546f5f03"
+COPY versions/libheif.env /build/libheif.env
 
-RUN curl -fL "https://github.com/strukturag/libheif/archive/v${LIBHEIF_VERSION}.tar.gz" -o ../libheif.tar.gz \
+RUN . /build/libheif.env \
+    && curl -fL "${LIBHEIF_URL}" -o ../libheif.tar.gz \
     && echo "${LIBHEIF_SHA256} *../libheif.tar.gz" | sha256sum -c - \
     && mkdir -p /src \
     && tar xf ../libheif.tar.gz --strip-components=1 -C /src \

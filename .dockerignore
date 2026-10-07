@@ -1,4 +1,5 @@
 **
+!versions/
 !pyproject.toml
 !setup.py
 !libheif_binary/

@@ -7,10 +7,10 @@ and write HEIF and AVIF images. Includes the `heif-enc`, `heif-dec` and
 To build a Linux wheel, run this from the repository directory with Docker running:
 
 ```sh
-make manylinux
+make -C linux manylinux
 ```
 
-For Alpine Linux (musl), use `make musllinux` instead.
+For Alpine Linux (musl), use `make -C linux musllinux` instead.
 
 The wheel is saved in `dist/`. Install it with:
 
@@ -18,8 +18,8 @@ The wheel is saved in `dist/`. Install it with:
 python -m pip install dist/*.whl
 ```
 
-To build for a specific architecture, pass `PLATFORM=linux/amd64` or
-`PLATFORM=linux/arm64` to make.
+To build for a specific architecture, pass `ARCH=amd64` or
+`ARCH=arm64` to make.
 
 To run the CLI tools without starting Python first, replace their wrappers with
 symlinks in the installed environment:

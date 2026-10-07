@@ -4,10 +4,15 @@ from pathlib import Path
 
 
 def load_library():
-    """Preload bundled libheif before importing a linked extension (Linux)."""
+    """Preload bundled libheif before importing a linked extension."""
     import ctypes
 
-    path = Path(__file__).resolve().parent / "lib" / "libheif-loader.so"
+    package = Path(__file__).resolve().parent
+    if sys.platform == "darwin":
+        version = (package / "LIBVERSION").read_text().strip()
+        path = package / "lib" / f"libheif.{version}.dylib"
+    else:
+        path = package / "lib" / "libheif-loader.so"
     return ctypes.CDLL(str(path), mode=ctypes.RTLD_GLOBAL)
 
 

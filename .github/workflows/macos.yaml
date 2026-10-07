@@ -1,0 +1,104 @@
+name: macOS wheels
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Build dependencies
+        run: make -C macos libs
+
+      - name: Build libheif
+        run: make -C macos libheif
+
+      - name: Build and test wheel
+        run: make -C macos wheel
+
+      - uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/libheif_binary-*.whl
+          if-no-files-found: error
+
+  merge:
+    name: Merge universal2 wheel
+    needs: build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: 'libheif_binary-*.whl'
+          path: wheels
+          merge-multiple: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          architecture: arm64
+
+      - name: Install delocate
+        run: |
+          source macos/venv.env
+          python -m pip install "delocate==$DELOCATE_VERSION"
+
+      - name: Merge wheels
+        run: delocate-merge -w dist wheels/*.whl
+
+      - name: Prepare smoke test image
+        run: |
+          source versions/libheif.env
+          curl -fL "https://raw.githubusercontent.com/strukturag/libheif/v$LIBHEIF_VERSION/examples/example.heic" \
+            -o "$RUNNER_TEMP/example.heic"
+
+      - name: Smoke test universal2 wheel (arm64)
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke-arm64"
+          source "$RUNNER_TEMP/smoke-arm64/bin/activate"
+          python -c 'import platform; assert platform.machine() == "arm64"'
+          python -m pip install dist/*.whl
+          python tests/smoke.py "$RUNNER_TEMP/example.heic"
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          architecture: x64
+
+      - name: Smoke test universal2 wheel (x86_64)
+        shell: arch -x86_64 /bin/bash --noprofile --norc -eo pipefail {0}
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke-x86_64"
+          source "$RUNNER_TEMP/smoke-x86_64/bin/activate"
+          python -c 'import platform; assert platform.machine() == "x86_64"'
+          python -m pip install dist/*.whl
+          python tests/smoke.py "$RUNNER_TEMP/example.heic"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/libheif_binary-*.whl
+          if-no-files-found: error
