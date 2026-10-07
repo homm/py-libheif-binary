@@ -10,7 +10,7 @@ include ../versions/*.env venv.env
 JOBS := $(shell sysctl -n hw.ncpu)
 
 .PHONY: libs x264 x265 de265 aom sharpyuv libpng libjpeg libheif
-libs: x264 x265 de265 aom sharpyuv libpng libjpeg
+libs: x265 de265 aom sharpyuv libpng libjpeg
 x264: build/x264-$(X264_BUILD).done
 x265: build/x265-$(X265_VERSION).done
 de265: build/de265-$(DE265_VERSION).done
@@ -202,7 +202,7 @@ build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpe
 	cp README.ijg "$$target/share/licenses/libjpeg-README.ijg"; \
 	printf '%s\n' "$(LIBJPEG_SHA256)" > "$$stamp"
 
-DEPENDENCY_PREFIXES := build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
+DEPENDENCY_PREFIXES := build/x265-$(X265_VERSION) \
     build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
     build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
     build/libjpeg-$(LIBJPEG_VERSION)
@@ -227,14 +227,11 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
-		-DWITH_EXAMPLE_HEIF_THUMB=OFF \
 		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
-		-DBUILD_DOCUMENTATION=OFF \
 		. 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
 	grep -q 'Found libsharpyuv:' _configure.log; \
-	grep -q "'x264' as built-in backend" _configure.log; \
 	grep -q "'x265' as built-in backend" _configure.log; \
 	grep -q "'libde265' as built-in backend" _configure.log; \
 	grep -q "'aomdec' as built-in backend" _configure.log; \

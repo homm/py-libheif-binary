@@ -238,7 +238,6 @@ RUN . /build/libheif.env \
     && tar xf ../libheif.tar.gz --strip-components=1 -C /src \
     && rm -rf /build/*
 
-COPY --from=build-x264 /opt/usr/local/ /usr/local/
 COPY --from=build-x265 /opt/usr/local/ /usr/local/
 COPY --from=build-de265 /opt/usr/local/ /usr/local/
 COPY --from=build-aom /opt/usr/local/ /usr/local/
@@ -252,14 +251,11 @@ WORKDIR /src/build
 RUN cmake --preset=release-noplugins \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
-        -DWITH_EXAMPLE_HEIF_THUMB=OFF \
         -DWITH_EXAMPLE_HEIF_VIEW=OFF \
-        -DBUILD_DOCUMENTATION=OFF \
         .. 2>&1 | tee _configure.log \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
     && grep -q 'Found libsharpyuv:' _configure.log \
-    && grep -q "'x264' as built-in backend" _configure.log \
     && grep -q "'x265' as built-in backend" _configure.log \
     && grep -q "'libde265' as built-in backend" _configure.log \
     && grep -q "'aomdec' as built-in backend" _configure.log \
