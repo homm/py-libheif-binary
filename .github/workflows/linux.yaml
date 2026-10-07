@@ -2,7 +2,6 @@ name: Linux wheels
 
 on:
   workflow_dispatch:
-  pull_request:
   push:
     tags:
       - 'v[0-9]*'
@@ -37,6 +36,6 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: linux-${{ matrix.base }}-${{ matrix.arch }}
-          path: dist/*.whl
+          archive: false
+          path: dist/libheif_binary-*.whl
           if-no-files-found: error
