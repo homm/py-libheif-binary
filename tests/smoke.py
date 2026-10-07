@@ -32,8 +32,8 @@ for name in ("heif-enc", "heif-dec", "heif-info"):
     assert executable and Path(executable).parent.resolve() == Path(sys.executable).parent.resolve()
     subprocess.run([name, "--help"], check=True)
 arguments = ["--invalid-option"]
-wrapped = subprocess.run(["heif-enc", *arguments], capture_output=True)
-native = subprocess.run([str(package / "bin" / "heif-enc"), *arguments], capture_output=True)
+wrapped = subprocess.run(["heif-enc", *arguments], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+native = subprocess.run([str(package / "bin" / "heif-enc"), *arguments], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 assert wrapped.returncode == native.returncode
 assert wrapped.stdout == native.stdout
 assert wrapped.stderr == native.stderr, (sys.executable, wrapped.stderr, native.stderr)
@@ -43,7 +43,7 @@ for name in ("heif-enc", "heif-dec", "heif-info"):
     assert executable.is_symlink()
     assert executable.resolve() == (package / "bin" / name).resolve()
     subprocess.run([name, "--help"], check=True)
-encoders = subprocess.check_output(["heif-enc", "--list-encoders"], text=True)
+encoders = subprocess.check_output(["heif-enc", "--list-encoders"], universal_newlines=True)
 for encoder in ("x264", "x265", "aom"):
     assert encoder in encoders, encoders
 

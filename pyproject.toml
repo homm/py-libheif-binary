@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "libheif_binary"
 dynamic = ["version"]
 description = "Prebuilt libheif, codecs and command-line tools"
-requires-python = ">=3.9"
+requires-python = ">=3.6"
 
 [project.scripts]
 heif-enc = "libheif_binary:heif_enc"
