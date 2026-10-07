@@ -227,7 +227,6 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
-		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
 		. 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \

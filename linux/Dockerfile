@@ -251,7 +251,6 @@ WORKDIR /src/build
 RUN cmake --preset=release-noplugins \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
-        -DWITH_EXAMPLE_HEIF_VIEW=OFF \
         .. 2>&1 | tee _configure.log \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
