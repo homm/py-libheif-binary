@@ -7,10 +7,10 @@ and write HEIF and AVIF images. Includes the `heif-enc`, `heif-dec` and
 To build a Linux wheel, run this from the repository directory with Docker running:
 
 ```sh
-make manylinux
+make -C linux manylinux
 ```
 
-For Alpine Linux (musl), use `make musllinux` instead.
+For Alpine Linux (musl), use `make -C linux musllinux` instead.
 
 The wheel is saved in `dist/`. Install it with:
 

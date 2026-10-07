@@ -1,5 +1,6 @@
 import ctypes
 import threading
+import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -9,6 +10,23 @@ import libheif_binary
 
 
 class LoadLibraryTest(unittest.TestCase):
+    def setUp(self):
+        platform = patch.object(libheif_binary.sys, "platform", "linux")
+        platform.start()
+        self.addCleanup(platform.stop)
+
+    def test_macos_loads_bundled_library_with_recorded_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory).resolve()
+            (package / "LIBVERSION").write_text("1.23.6\n")
+            with patch.object(libheif_binary.sys, "platform", "darwin"), patch.object(
+                libheif_binary, "__file__", str(package / "__init__.py")
+            ), patch.object(ctypes, "CDLL") as load:
+                self.assertIs(libheif_binary.load_library(), load.return_value)
+                load.assert_called_once_with(
+                    str(package / "lib/libheif.1.23.6.dylib"), mode=ctypes.RTLD_GLOBAL
+                )
+
     def test_each_call_returns_its_own_library_object(self):
         handles = [object(), object()]
         with patch.object(

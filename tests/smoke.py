@@ -16,15 +16,20 @@ lib = libheif_binary.load_library()
 other = libheif_binary.load_library()
 assert other is not lib
 assert ctypes.cast(other.heif_get_version, ctypes.c_void_p).value == ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value
-resident = ctypes.CDLL("libheif.so.1", mode=os.RTLD_NOLOAD | os.RTLD_NOW)
-bundled = ctypes.CDLL(str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW)
-assert ctypes.cast(resident.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
+if sys.platform == "darwin":
+    version = (package / "LIBVERSION").read_text().strip()
+    bundled = ctypes.CDLL(str(package / "lib" / f"libheif.{version}.dylib"))
+    assert ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
+else:
+    resident = ctypes.CDLL("libheif.so.1", mode=os.RTLD_NOLOAD | os.RTLD_NOW)
+    bundled = ctypes.CDLL(str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW)
+    assert ctypes.cast(resident.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
 lib.heif_get_version.restype = ctypes.c_char_p
 assert lib.heif_get_version().decode() == (package / "LIBVERSION").read_text().strip()
 
 for name in ("heif-enc", "heif-dec", "heif-info"):
     executable = shutil.which(name)
-    assert executable and Path(executable).parent == Path(sys.executable).parent
+    assert executable and Path(executable).parent.resolve() == Path(sys.executable).parent.resolve()
     subprocess.run([name, "--help"], check=True)
 arguments = ["--invalid-option"]
 wrapped = subprocess.run(["heif-enc", *arguments], capture_output=True)

@@ -2,3 +2,5 @@
 /build/
 /*.egg-info/
 __pycache__/
+/macos/sources/
+/macos/build/
