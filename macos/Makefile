@@ -246,7 +246,6 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif-$(LIBHEIF_VERSION).tar.gz
 		-DCMAKE_PREFIX_PATH="$$prefix" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
-		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
 		-DWITH_X264=OFF \
 		-DWITH_JPEG_ENCODER=ON \
