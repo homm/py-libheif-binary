@@ -4,10 +4,10 @@ from pathlib import Path
 
 
 def load_library():
-    """Preload bundled libheif before importing a linked extension (Linux/glibc)."""
+    """Preload bundled libheif before importing a linked extension (Linux)."""
     import ctypes
 
-    path = Path(__file__).resolve().parent / "lib" / "libheif.so.1"
+    path = Path(__file__).resolve().parent / "lib" / "libheif-loader.so"
     return ctypes.CDLL(str(path), mode=ctypes.RTLD_GLOBAL)
 
 

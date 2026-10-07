@@ -20,7 +20,7 @@ class LoadLibraryTest(unittest.TestCase):
             self.assertIs(second, handles[1])
             self.assertIsNot(first, second)
             expected = call(
-                str(Path("/different/site-packages/libheif_binary/lib/libheif.so.1").resolve()),
+                str(Path("/different/site-packages/libheif_binary/lib/libheif-loader.so").resolve()),
                 mode=ctypes.RTLD_GLOBAL,
             )
             self.assertEqual(load.call_args_list, [expected, expected])

@@ -11,13 +11,14 @@ from pathlib import Path
 import libheif_binary
 
 
-package = Path(libheif_binary.__file__).parent
+package = Path(libheif_binary.__file__).resolve().parent
 lib = libheif_binary.load_library()
 other = libheif_binary.load_library()
 assert other is not lib
 assert other._handle == lib._handle
 resident = ctypes.CDLL("libheif.so.1", mode=os.RTLD_NOLOAD | os.RTLD_NOW)
-assert resident._handle == lib._handle
+bundled = ctypes.CDLL(str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW)
+assert resident._handle == bundled._handle
 lib.heif_get_version.restype = ctypes.c_char_p
 assert lib.heif_get_version().decode() == (package / "LIBVERSION").read_text().strip()
 
@@ -30,7 +31,7 @@ wrapped = subprocess.run(["heif-enc", *arguments], capture_output=True)
 native = subprocess.run([str(package / "bin" / "heif-enc"), *arguments], capture_output=True)
 assert wrapped.returncode == native.returncode
 assert wrapped.stdout == native.stdout
-assert wrapped.stderr == native.stderr
+assert wrapped.stderr == native.stderr, (sys.executable, wrapped.stderr, native.stderr)
 subprocess.run(["libheif-link-cli"], check=True)
 for name in ("heif-enc", "heif-dec", "heif-info"):
     executable = Path(shutil.which(name))

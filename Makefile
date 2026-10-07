@@ -1,13 +1,15 @@
+BASE ?= manylinux
 PLATFORM ?=
 TARGET ?= wheel
 
 BUILD_ARGS = $(if $(PLATFORM),--platform=$(PLATFORM))
-BUILD_ARGS += --tag libheif-binary:$(TARGET)
+BUILD_ARGS += --build-arg BASE=$(BASE) --tag libheif-binary:$(BASE)-$(TARGET)
 ifeq ($(TARGET),wheel)
 BUILD_ARGS += --load --output type=local,dest=dist
 endif
 
-.PHONY: manylinux
-manylinux:
+.PHONY: manylinux musllinux
+musllinux: BASE = musllinux
+manylinux musllinux:
 	docker build $(BUILD_ARGS) -f Dockerfile.manylinux \
 		--target $(TARGET) .
