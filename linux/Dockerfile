@@ -171,6 +171,8 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-libheif ---------------------------------------
 FROM build-base AS build-libheif
 
+RUN pip install --no-cache-dir cmake==3.31.6
+
 COPY versions/libheif.env /build/libheif.env
 
 RUN . /build/libheif.env \
