@@ -255,20 +255,22 @@ RUN . /build/libheif.env \
 COPY --from=build-x265 /opt/usr/local/ /usr/local/
 COPY --from=build-de265 /opt/usr/local/ /usr/local/
 COPY --from=build-aom /opt/usr/local/ /usr/local/
-COPY --from=build-sharpyuv /opt/usr/local/ /usr/local/
 COPY --from=build-libpng /opt/usr/local/ /usr/local/
 COPY --from=build-libjpeg /opt/usr/local/ /usr/local/
 RUN ldconfig || true
 
 WORKDIR /src/build
 
-RUN cmake --preset=release-noplugins \
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_PLUGIN_LOADING=OFF \
+        -DWITH_DAV1D=OFF \
+        -DWITH_SvtEnc=OFF \
+        -DWITH_RAV1E=OFF \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
         .. 2>&1 | tee _configure.log \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
-    && grep -q 'Found libsharpyuv:' _configure.log \
     && grep -q "'x265' as built-in backend" _configure.log \
     && grep -q "'libde265' as built-in backend" _configure.log \
     && grep -q "'aomdec' as built-in backend" _configure.log \
