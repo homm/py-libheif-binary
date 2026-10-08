@@ -17,13 +17,13 @@ assert (headers / "heif.h").is_file()
 assert (headers / "heif_cxx.h").is_file()
 version_header = (headers / "heif_version.h").read_text()
 assert '#define LIBHEIF_PLUGIN_DIRECTORY ""' in version_header
-assert '#define LIBHEIF_VERSION "{}"'.format((package / "LIBVERSION").read_text().strip()) in version_header
+assert '#define LIBHEIF_VERSION "{}"'.format(libheif_binary.get_version_str()) in version_header
 lib = libheif_binary.load_library()
 other = libheif_binary.load_library()
 assert other is not lib
 assert ctypes.cast(other.heif_get_version, ctypes.c_void_p).value == ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value
 if sys.platform == "darwin":
-    version = (package / "LIBVERSION").read_text().strip()
+    version = libheif_binary.get_version_str()
     bundled = ctypes.CDLL(str(package / "lib" / f"libheif.{version}.dylib"))
     assert ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
 else:
@@ -31,7 +31,7 @@ else:
     bundled = ctypes.CDLL(str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW)
     assert ctypes.cast(resident.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
 lib.heif_get_version.restype = ctypes.c_char_p
-assert lib.heif_get_version().decode() == (package / "LIBVERSION").read_text().strip()
+assert lib.heif_get_version().decode() == libheif_binary.get_version_str()
 
 for name in ("heif-enc", "heif-dec", "heif-info"):
     executable = shutil.which(name)

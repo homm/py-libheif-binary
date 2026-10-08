@@ -9,6 +9,50 @@ from unittest.mock import call, patch
 import libheif_binary
 
 
+class VersionTest(unittest.TestCase):
+    def test_returns_bundled_version_as_string_without_surrounding_whitespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory).resolve()
+            (package / "LIBVERSION").write_text(" 1.17.6\n")
+            with patch.object(libheif_binary, "PACKAGE_DIR", package):
+                self.assertEqual(libheif_binary.get_version_str(), "1.17.6")
+
+    def test_returns_bundled_version_as_integer_tuple(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory).resolve()
+            (package / "LIBVERSION").write_text("1.17.6\n")
+            with patch.object(libheif_binary, "PACKAGE_DIR", package):
+                self.assertEqual(libheif_binary.get_version(), (1, 17, 6))
+
+
+class BuildConfigTest(unittest.TestCase):
+    def test_linux_config_uses_bundled_paths_and_exact_library_filename(self):
+        package = Path("relative/libheif_binary").resolve()
+        with patch.object(libheif_binary.sys, "platform", "linux"), patch.object(
+            libheif_binary, "PACKAGE_DIR", package
+        ):
+            self.assertEqual(libheif_binary.get_build_config(), {
+                "include_dirs": [str(package / "include")],
+                "library_dirs": [str(package / "lib")],
+                "libraries": [":libheif.so.1"],
+            })
+
+    def test_macos_config_uses_recorded_version_for_library_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory).resolve()
+            for version in ("1.17.6", "1.23.6"):
+                with self.subTest(version=version):
+                    (package / "LIBVERSION").write_text(version + "\n")
+                    with patch.object(libheif_binary.sys, "platform", "darwin"), patch.object(
+                        libheif_binary, "PACKAGE_DIR", package
+                    ):
+                        self.assertEqual(libheif_binary.get_build_config(), {
+                            "include_dirs": [str(package / "include")],
+                            "library_dirs": [str(package / "lib")],
+                            "libraries": ["heif." + version],
+                        })
+
+
 class LoadLibraryTest(unittest.TestCase):
     def setUp(self):
         platform = patch.object(libheif_binary.sys, "platform", "linux")
@@ -20,7 +64,7 @@ class LoadLibraryTest(unittest.TestCase):
             package = Path(directory).resolve()
             (package / "LIBVERSION").write_text("1.23.6\n")
             with patch.object(libheif_binary.sys, "platform", "darwin"), patch.object(
-                libheif_binary, "__file__", str(package / "__init__.py")
+                libheif_binary, "PACKAGE_DIR", package
             ), patch.object(ctypes, "CDLL") as load:
                 self.assertIs(libheif_binary.load_library(), load.return_value)
                 load.assert_called_once_with(
@@ -30,7 +74,7 @@ class LoadLibraryTest(unittest.TestCase):
     def test_each_call_returns_its_own_library_object(self):
         handles = [object(), object()]
         with patch.object(
-            libheif_binary, "__file__", "/different/site-packages/libheif_binary/__init__.py"
+            libheif_binary, "PACKAGE_DIR", Path("/different/site-packages/libheif_binary").resolve()
         ), patch.object(ctypes, "CDLL", side_effect=handles) as load:
             first = libheif_binary.load_library()
             second = libheif_binary.load_library()

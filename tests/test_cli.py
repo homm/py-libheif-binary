@@ -8,6 +8,41 @@ from unittest.mock import patch
 import libheif_binary
 
 
+class ExecutableTest(unittest.TestCase):
+    def test_known_commands_return_absolute_paths_without_requiring_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory).resolve()
+            with patch.object(libheif_binary, "PACKAGE_DIR", package):
+                for name in ("heif-enc", "heif-dec", "heif-info"):
+                    with self.subTest(name=name):
+                        self.assertEqual(
+                            libheif_binary.get_executable(name), str(package / "bin" / name)
+                        )
+
+    def test_unknown_commands_and_paths_raise_value_error(self):
+        for name in ("unknown", "../heif-dec", "/tmp/heif-dec", ""):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                libheif_binary.get_executable(name)
+
+    def test_wrappers_execute_resolved_command_with_original_arguments(self):
+        for name, wrapper in (
+            ("heif-enc", libheif_binary.heif_enc),
+            ("heif-dec", libheif_binary.heif_dec),
+            ("heif-info", libheif_binary.heif_info),
+        ):
+            with self.subTest(name=name), patch.object(
+                libheif_binary, "get_executable", return_value="/bundled/bin/" + name
+            ) as executable, patch.object(libheif_binary.os, "execv") as execute, patch.object(
+                libheif_binary.sys, "argv", ["wrapper", "--help", "file with spaces.heic"]
+            ):
+                wrapper()
+                executable.assert_called_once_with(name)
+                execute.assert_called_once_with(
+                    "/bundled/bin/" + name,
+                    ["/bundled/bin/" + name, "--help", "file with spaces.heic"],
+                )
+
+
 class LinkCliTest(unittest.TestCase):
     def test_links_replace_wrappers_and_survive_environment_move(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -21,7 +56,7 @@ class LinkCliTest(unittest.TestCase):
             for name in names:
                 (scripts / name).write_text("wrapper")
                 (binaries / name).write_text("binary")
-            with patch.object(libheif_binary, "__file__", str(package / "__init__.py")), patch.object(
+            with patch.object(libheif_binary, "PACKAGE_DIR", package.resolve()), patch.object(
                 sysconfig, "get_path", return_value=str(scripts)
             ):
                 libheif_binary.link_cli()
@@ -43,7 +78,7 @@ class LinkCliTest(unittest.TestCase):
             scripts.mkdir()
             wrapper = scripts / "heif-enc"
             wrapper.write_text("wrapper")
-            with patch.object(libheif_binary, "__file__", str(Path(directory) / "package/__init__.py")), patch.object(
+            with patch.object(libheif_binary, "PACKAGE_DIR", Path(directory) / "package"), patch.object(
                 sysconfig, "get_path", return_value=str(scripts)
             ):
                 with self.assertRaisesRegex(SystemExit, "binary missing.*heif-enc"):
