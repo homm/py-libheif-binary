@@ -19,4 +19,4 @@ libheif-link-cli = "libheif_binary:link_cli"
 packages = ["libheif_binary"]
 
 [tool.setuptools.package-data]
-libheif_binary = ["bin/*", "lib/*", "licenses/*", "LIBVERSION"]
+libheif_binary = ["bin/*", "lib/*", "licenses/*", "include/libheif/*.h", "LIBVERSION"]

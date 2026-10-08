@@ -213,11 +213,14 @@ WORKDIR /package
 COPY pyproject.toml setup.py README.md ./
 COPY libheif_binary ./libheif_binary
 
-RUN sed -n 's/^#define LIBHEIF_VERSION "\([^"]*\)"/\1/p' \
+RUN mkdir -p libheif_binary/bin libheif_binary/licenses libheif_binary/include libheif_binary/lib \
+    && sed -n 's/^#define LIBHEIF_VERSION "\([^"]*\)"/\1/p' \
         /usr/local/include/libheif/heif_version.h > libheif_binary/LIBVERSION \
     && test -s libheif_binary/LIBVERSION \
-    && cp -r /usr/local/share/licenses libheif_binary/licenses \
-    && mkdir -p libheif_binary/bin libheif_binary/lib \
+    && cp -r /usr/local/include/libheif libheif_binary/include/ \
+    && sed -i 's/^#define LIBHEIF_PLUGIN_DIRECTORY .*/#define LIBHEIF_PLUGIN_DIRECTORY ""/' \
+        libheif_binary/include/libheif/heif_version.h \
+    && cp -r /usr/local/share/licenses/. libheif_binary/licenses/ \
     && cp -L /usr/local/lib/libheif.so.1 libheif_binary/lib/ \
     && cc -shared -fPIC -x c /dev/null \
         -L/usr/local/lib \

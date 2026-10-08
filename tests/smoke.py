@@ -12,6 +12,12 @@ import libheif_binary
 
 
 package = Path(libheif_binary.__file__).resolve().parent
+headers = package / "include" / "libheif"
+assert (headers / "heif.h").is_file()
+assert (headers / "heif_cxx.h").is_file()
+version_header = (headers / "heif_version.h").read_text()
+assert '#define LIBHEIF_PLUGIN_DIRECTORY ""' in version_header
+assert '#define LIBHEIF_VERSION "{}"'.format((package / "LIBVERSION").read_text().strip()) in version_header
 lib = libheif_binary.load_library()
 other = libheif_binary.load_library()
 assert other is not lib

@@ -237,10 +237,13 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	mkdir -p build/wheel; \
 	cp ../pyproject.toml ../setup.py ../README.md build/wheel/; \
 	cp -r ../libheif_binary build/wheel/; \
-	mkdir -p $$target/bin $$target/licenses; \
+	mkdir -p $$target/bin $$target/licenses $$target/include; \
 	sed -n 's/^#define LIBHEIF_VERSION "\([^" ]*\)"/\1/p' \
 		$$build/include/libheif/heif_version.h > $$target/LIBVERSION; \
 	test -s $$target/LIBVERSION; \
+	cp -r $$build/include/libheif $$target/include/; \
+	sed -i '' 's/^#define LIBHEIF_PLUGIN_DIRECTORY .*/#define LIBHEIF_PLUGIN_DIRECTORY ""/' \
+		$$target/include/libheif/heif_version.h; \
 	for prefix in build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
 		build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
 		build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
