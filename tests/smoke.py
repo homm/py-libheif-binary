@@ -43,8 +43,8 @@ for name in ("heif-enc", "heif-dec", "heif-info"):
     assert executable.is_symlink()
     assert executable.resolve() == (package / "bin" / name).resolve()
     subprocess.run([name, "--help"], check=True)
-encoders = subprocess.check_output(["heif-enc", "--list-encoders"], universal_newlines=True)
-for encoder in ("x265", "aom"):
+for encoder, options in (("x265", []), ("aom", ["-A"])):
+    encoders = subprocess.check_output(["heif-enc", *options, "--list-encoders"], universal_newlines=True)
     assert encoder in encoders, encoders
 
 

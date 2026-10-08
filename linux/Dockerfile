@@ -190,17 +190,15 @@ RUN ldconfig || true
 WORKDIR /src/build
 
 RUN cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CXX_FLAGS=-Wno-error=maybe-uninitialized \
         -DENABLE_PLUGIN_LOADING=OFF \
         -DWITH_DAV1D=OFF \
         -DWITH_SvtEnc=OFF \
         -DWITH_RAV1E=OFF \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
-        -DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
-        -DWITH_EXAMPLE_HEIF_VIEW=OFF \
-        -DWITH_GDK_PIXBUF=OFF \
         .. 2>&1 | tee _configure.log \
-    && grep -q 'Found PNG:' _configure.log \
+    && grep -q 'Found libpng, version' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
     && grep -q "'x265' as built-in backend" _configure.log \
     && grep -q "'libde265' as built-in backend" _configure.log \

@@ -61,7 +61,7 @@ build/venv: sources/nasm.zip venv.env
 	source "$@/bin/activate"; \
 	unzip -p "$<" "nasm-$(NASM_VERSION)/nasm" > "$@/bin/nasm"; \
 	chmod +x "$@/bin/nasm"; \
-	pip install cmake==$(CMAKE_VERSION) delocate==$(DELOCATE_VERSION) wheel==$(WHEEL_VERSION); \
+	pip install cmake==$(CMAKE_VERSION) pkgconf==$(PKGCONF_VERSION) delocate==$(DELOCATE_VERSION) wheel==$(WHEEL_VERSION); \
 	touch "$@"
 
 # Run each build in a fresh temporary directory; install into its versioned prefix.
@@ -202,6 +202,10 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
         build/libjpeg-$(LIBJPEG_VERSION).done | build/venv
 	@$(prepare) \
 	build="$(abspath build)"; \
+	zlib_version=$$(sed -n 's/^#define ZLIB_VERSION "\([^"]*\)"/\1/p' "$$(xcrun --show-sdk-path)/usr/include/zlib.h"); \
+	export PKG_CONFIG_PATH="$$build/libpng-$(LIBPNG_VERSION)/lib/pkgconfig"; \
+	printf 'Name: zlib\nDescription: macOS SDK zlib\nVersion: %s\nLibs: -lz\n' \
+		"$$zlib_version" > "$$PKG_CONFIG_PATH/zlib.pc"; \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DENABLE_PLUGIN_LOADING=OFF \
@@ -212,11 +216,8 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DCMAKE_PREFIX_PATH="$$build/x265-$(X265_VERSION);$$build/de265-$(DE265_VERSION);$$build/aom-$(AOM_VERSION);$$build/libpng-$(LIBPNG_VERSION);$$build/libjpeg-$(LIBJPEG_VERSION)" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
-		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
-		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
-		-DWITH_GDK_PIXBUF=OFF \
 		2>&1 | tee _configure.log; \
-	grep -q 'Found PNG:' _configure.log; \
+	grep -q 'Found libpng, version' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
 	grep -q "'x265' as built-in backend" _configure.log; \
 	grep -q "'libde265' as built-in backend" _configure.log; \
