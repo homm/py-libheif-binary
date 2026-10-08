@@ -42,6 +42,24 @@ to install libheif or its codecs separately.
 
 ## Python API
 
+`get_version_str()` returns the bundled libheif version as a string, such as
+`"1.17.6"`. `get_version()` returns it as an integer tuple, such as
+`(1, 17, 6)`.
+
+`get_build_config()` returns cffi compiler and linker arguments for the bundled
+headers and library:
+
+```python
+from cffi import FFI
+from libheif_binary import get_build_config
+
+ffi = FFI()
+ffi.set_source("_libheif", "#include <libheif/heif.h>", **get_build_config())
+```
+
+`get_executable(name)` returns an absolute path to `heif-enc`, `heif-dec` or
+`heif-info`.
+
 On Linux and macOS, preload the bundled library before importing a Python
 extension linked against libheif:
 

@@ -194,24 +194,32 @@ build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpe
 	cp README.ijg "$$prefix/share/licenses/libjpeg-README.ijg"; \
 	printf '%s\n' "$(LIBJPEG_SHA256)" > "$$stamp"
 
+DEPENDENCY_PREFIXES := build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
+    build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
+    build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
+    build/libjpeg-$(LIBJPEG_VERSION)
+
+build/prefix.done: $(addsuffix .done,$(DEPENDENCY_PREFIXES))
+	set -euo pipefail; \
+	rm -rf build/prefix; \
+	mkdir -p build/prefix; \
+	for prefix in $(DEPENDENCY_PREFIXES); do \
+		cp -R "$$prefix/." build/prefix/; \
+	done; \
+	touch "$@"
+
 build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libheif.env \
-        build/x264-$(X264_BUILD).done \
-        build/x265-$(X265_VERSION).done \
-        build/de265-$(DE265_VERSION).done \
-        build/aom-$(AOM_VERSION).done \
-        build/sharpyuv-$(WEBP_VERSION).done \
-        build/libpng-$(LIBPNG_VERSION).done \
-        build/libjpeg-$(LIBJPEG_VERSION).done | build/venv
+        build/prefix.done | build/venv
 	@$(prepare) \
-	build="$(abspath build)"; \
+	build="$(abspath build/prefix)"; \
 	cmake --preset=release-noplugins -S . -B build \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
-		-DCMAKE_PREFIX_PATH="$$build/x264-$(X264_BUILD);$$build/x265-$(X265_VERSION);$$build/de265-$(DE265_VERSION);$$build/aom-$(AOM_VERSION);$$build/sharpyuv-$(WEBP_VERSION);$$build/libpng-$(LIBPNG_VERSION);$$build/libjpeg-$(LIBJPEG_VERSION)" \
+		-DCMAKE_PREFIX_PATH="$$build" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
-		-DCMAKE_INCLUDE_PATH="$$build/sharpyuv-$(WEBP_VERSION)/include/webp" \
+		-DCMAKE_INCLUDE_PATH="$$build/include/webp" \
 		-DWITH_EXAMPLE_HEIF_THUMB=OFF 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
@@ -225,13 +233,14 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 	cmake --install build; \
 	mkdir -p "$$prefix/share/licenses"; \
 	cp COPYING "$$prefix/share/licenses/libheif-COPYING"; \
+	cp -R "$$prefix/." "$$build/"; \
 	printf '%s\n' "$(LIBHEIF_SHA256)" > "$$stamp"
 
 .PHONY: wheel
 wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	# Prepare package files.
 	set -euo pipefail; \
-	build=build/libheif-$(LIBHEIF_VERSION); \
+	build=build/prefix; \
 	target=build/wheel/libheif_binary; \
 	rm -rf build/wheel; \
 	mkdir -p build/wheel; \
@@ -244,12 +253,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	cp -r $$build/include/libheif $$target/include/; \
 	sed -i '' 's/^#define LIBHEIF_PLUGIN_DIRECTORY .*/#define LIBHEIF_PLUGIN_DIRECTORY ""/' \
 		$$target/include/libheif/heif_version.h; \
-	for prefix in build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
-		build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
-		build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
-		build/libjpeg-$(LIBJPEG_VERSION) $$build; do \
-		cp $$prefix/share/licenses/* $$target/licenses/; \
-	done; \
+	cp $$build/share/licenses/* $$target/licenses/; \
 	cp $$build/bin/heif-enc $$build/bin/heif-dec $$build/bin/heif-info $$target/bin/
 
 	# Build the initial wheel and bundle dependencies
@@ -258,7 +262,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	platform=$$(python -c 'import platform, sysconfig; print(sysconfig.get_platform().rsplit("-", 1)[0] + "-" + platform.machine())'); \
 	pip wheel ./build/wheel -w build/wheel \
 		--config-settings=--build-option=--plat-name="$$platform"; \
-	DYLD_LIBRARY_PATH="build/libheif-$(LIBHEIF_VERSION)/lib:build/x264-$(X264_BUILD)/lib:build/x265-$(X265_VERSION)/lib:build/de265-$(DE265_VERSION)/lib:build/aom-$(AOM_VERSION)/lib:build/sharpyuv-$(WEBP_VERSION)/lib:build/libpng-$(LIBPNG_VERSION)/lib:build/libjpeg-$(LIBJPEG_VERSION)/lib" \
+	DYLD_LIBRARY_PATH=build/prefix/lib \
 		delocate-wheel -L lib build/wheel/*.whl
 
 	# Restore the stable libheif install ID and repack
