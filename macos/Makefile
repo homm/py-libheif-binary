@@ -10,7 +10,7 @@ include ../versions/*.env venv.env
 JOBS := $(shell sysctl -n hw.ncpu)
 
 .PHONY: libs x264 x265 de265 aom sharpyuv libpng libjpeg libheif
-libs: x265 de265 aom sharpyuv libpng libjpeg
+libs: x265 de265 aom libpng libjpeg
 x264: build/x264-$(X264_BUILD).done
 x265: build/x265-$(X265_VERSION).done
 de265: build/de265-$(DE265_VERSION).done
@@ -204,8 +204,7 @@ build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpe
 
 DEPENDENCY_PREFIXES := build/x265-$(X265_VERSION) \
     build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
-    build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
-    build/libjpeg-$(LIBJPEG_VERSION)
+    build/libpng-$(LIBPNG_VERSION) build/libjpeg-$(LIBJPEG_VERSION)
 
 define prepare_prefix
 prefix="$(abspath build/prefix)"; \
@@ -220,16 +219,19 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
         $(addsuffix .done,$(DEPENDENCY_PREFIXES)) | build/venv
 	@$(prepare) \
 	$(prepare_prefix) \
-	cmake --preset=release-noplugins -B build \
+	cmake -B build \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DENABLE_PLUGIN_LOADING=OFF \
+		-DWITH_DAV1D=OFF \
+		-DWITH_SvtEnc=OFF \
+		-DWITH_RAV1E=OFF \
 		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DCMAKE_PREFIX_PATH="$$prefix" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
-		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
 		. 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
-	grep -q 'Found libsharpyuv:' _configure.log; \
 	grep -q "'x265' as built-in backend" _configure.log; \
 	grep -q "'libde265' as built-in backend" _configure.log; \
 	grep -q "'aomdec' as built-in backend" _configure.log; \
