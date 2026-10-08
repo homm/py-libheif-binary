@@ -246,7 +246,8 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 		build/libjpeg-$(LIBJPEG_VERSION) $$build; do \
 		cp $$prefix/share/licenses/* $$target/licenses/; \
 	done; \
-	cp $$build/bin/heif-enc $$build/bin/heif-dec $$build/bin/heif-info $$target/bin/
+	cp $$build/bin/heif-enc $$build/bin/heif-info $$target/bin/; \
+	cp $$build/bin/heif-convert $$target/bin/heif-dec
 
 	# Build the initial wheel and bundle dependencies
 	set -euo pipefail; \

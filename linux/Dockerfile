@@ -224,7 +224,8 @@ RUN sed -n 's/^#define LIBHEIF_VERSION "\([^"]*\)"/\1/p' \
         -Wl,--no-as-needed -lheif -lc -Wl,--as-needed \
         -Wl,-rpath,'$ORIGIN' \
         -o libheif_binary/lib/libheif-loader.so \
-    && cp /usr/local/bin/heif-enc /usr/local/bin/heif-dec /usr/local/bin/heif-info libheif_binary/bin/ \
+    && cp /usr/local/bin/heif-enc /usr/local/bin/heif-info libheif_binary/bin/ \
+    && cp /usr/local/bin/heif-convert libheif_binary/bin/heif-dec \
     && for executable in libheif_binary/bin/*; do \
         lief-patchelf --set-rpath '$ORIGIN/../lib' "$executable"; \
     done
