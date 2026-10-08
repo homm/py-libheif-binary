@@ -245,7 +245,6 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif-$(LIBHEIF_VERSION).tar.gz
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DCMAKE_PREFIX_PATH="$$prefix" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
-		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
 		-DWITH_JPEG_ENCODER=ON \
 		-DWITH_JPEG_DECODER=ON \
@@ -285,7 +284,8 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	sed -i '' 's/^#define LIBHEIF_PLUGIN_DIRECTORY .*/#define LIBHEIF_PLUGIN_DIRECTORY ""/' \
 		$$target/include/libheif/heif_version.h; \
 	cp $$prefix/share/licenses/* $$target/licenses/; \
-	cp $$prefix/bin/heif-enc $$prefix/bin/heif-dec $$prefix/bin/heif-info $$target/bin/
+	cp $$prefix/bin/heif-enc $$prefix/bin/heif-info $$target/bin/; \
+	cp $$prefix/bin/heif-convert $$target/bin/heif-dec
 
 	# Build the initial wheel and bundle dependencies
 	@set -euo pipefail; \
