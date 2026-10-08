@@ -246,14 +246,10 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif-$(LIBHEIF_VERSION).tar.gz
 		-DCMAKE_PREFIX_PATH="$$prefix" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
-		-DWITH_JPEG_ENCODER=ON \
-		-DWITH_JPEG_DECODER=ON \
 		. 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
 	grep -q 'Found libsharpyuv:' _configure.log; \
-	grep -q "'jpegenc' as built-in backend" _configure.log; \
-	grep -q "'jpegdec' as built-in backend" _configure.log; \
 	grep -q "'x265' as built-in backend" _configure.log; \
 	grep -q "'libde265' as built-in backend" _configure.log; \
 	grep -q "'aomdec' as built-in backend" _configure.log; \

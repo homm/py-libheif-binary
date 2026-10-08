@@ -241,6 +241,8 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-libheif ---------------------------------------
 FROM build-base AS build-libheif
 
+RUN pip install --no-cache-dir cmake==3.31.6
+
 COPY versions/libheif.env /build/libheif.env
 
 RUN . /build/libheif.env \
@@ -263,14 +265,10 @@ WORKDIR /src/build
 RUN cmake --preset=release-noplugins \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
-        -DWITH_JPEG_ENCODER=ON \
-        -DWITH_JPEG_DECODER=ON \
         .. 2>&1 | tee _configure.log \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
     && grep -q 'Found libsharpyuv:' _configure.log \
-    && grep -q "'jpegenc' as built-in backend" _configure.log \
-    && grep -q "'jpegdec' as built-in backend" _configure.log \
     && grep -q "'x265' as built-in backend" _configure.log \
     && grep -q "'libde265' as built-in backend" _configure.log \
     && grep -q "'aomdec' as built-in backend" _configure.log \
