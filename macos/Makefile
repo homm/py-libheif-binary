@@ -3,6 +3,8 @@ SHELL := /bin/bash
 .DELETE_ON_ERROR:
 
 export MACOSX_DEPLOYMENT_TARGET := 11.0
+export CFLAGS := -O3 -g0
+export CXXFLAGS := -O3 -g0
 include ../versions/*.env venv.env
 
 JOBS := $(shell sysctl -n hw.ncpu)
@@ -87,7 +89,7 @@ endef
 build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/venv
 	@$(call prepare,$(X264_SHA256)) \
 	grep -q '^#define X264_BUILD $(X264_BUILD)$$' x264.h; \
-	./configure \
+	STRIP= ./configure \
 		--prefix="$$prefix" \
 		--libdir="$$prefix/lib" \
 		--enable-shared \
@@ -105,10 +107,12 @@ build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | buil
 	cmake -S source -B build \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
-		-DCMAKE_INSTALL_LIBDIR=lib \
-		-DENABLE_CLI=OFF; \
+		-DLIB_INSTALL_DIR=lib \
+		-DENABLE_CLI=OFF \
+		-DENABLE_SHARED=ON; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
+	rm "$$prefix/lib/libx265.a"; \
 	mkdir -p "$$prefix/share/licenses"; \
 	cp COPYING "$$prefix/share/licenses/x265-COPYING"; \
 	printf '%s\n' "$(X265_SHA256)" > "$$stamp"
@@ -121,6 +125,7 @@ build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | 
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DENABLE_ENCODER=OFF \
 		-DENABLE_DECODER=OFF \
+		-DENABLE_SDL=OFF \
 		-DENABLE_SHERLOCK265=OFF; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
@@ -142,6 +147,8 @@ build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/ve
 		-DENABLE_DOCS=OFF; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
+	rm "$$prefix/lib/libaom.a"; \
+	rm -rf "$$prefix/lib/cmake/AOM"; \
 	mkdir -p "$$prefix/share/licenses"; \
 	cp LICENSE "$$prefix/share/licenses/aom-LICENSE"; \
 	cp PATENTS "$$prefix/share/licenses/aom-PATENTS"; \
@@ -153,9 +160,10 @@ build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv.tar.gz ../versions/sharpyu
 		--prefix="$$prefix" \
 		--libdir="$$prefix/lib" \
 		--disable-everything \
-		--disable-shared \
+		--enable-shared \
+		--disable-static \
 		--disable-threading; \
-	make -C sharpyuv -j $(JOBS) CFLAGS='-fPIC' install; \
+	make -C sharpyuv -j $(JOBS) install; \
 	mkdir -p "$$prefix/share/licenses"; \
 	cp COPYING "$$prefix/share/licenses/libwebp-COPYING"; \
 	cp PATENTS "$$prefix/share/licenses/libwebp-PATENTS"; \
@@ -212,7 +220,7 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
         build/prefix.done | build/venv
 	@$(prepare) \
 	build="$(abspath build/prefix)"; \
-	cmake --preset=release-noplugins -S . -B build \
+	cmake --preset=release-noplugins -B build \
 		-DCMAKE_INSTALL_PREFIX="$$prefix" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DCMAKE_PREFIX_PATH="$$build" \
@@ -220,7 +228,10 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
 		-DCMAKE_INCLUDE_PATH="$$build/include/webp" \
-		-DWITH_EXAMPLE_HEIF_THUMB=OFF 2>&1 | tee _configure.log; \
+		-DWITH_EXAMPLE_HEIF_THUMB=OFF \
+		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
+		-DBUILD_DOCUMENTATION=OFF \
+		. 2>&1 | tee _configure.log; \
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
 	grep -q 'Found libsharpyuv:' _configure.log; \

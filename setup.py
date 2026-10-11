@@ -4,7 +4,7 @@ from setuptools import Distribution, setup
 from wheel.bdist_wheel import bdist_wheel
 
 
-REVISION = 2
+REVISION = 3
 LIBVERSION = Path('libheif_binary/LIBVERSION').read_text().strip()
 
 
