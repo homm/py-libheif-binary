@@ -175,7 +175,9 @@ installed package's `libheif_binary/licenses/` directory.
 
 ### Revision 3
 
-- Build native libraries with `-O3 -g0` and preserve ordinary symbol tables.
+- Update libaom from 3.15.1 to 3.15.2.
+- Preserve ordinary symbol tables in all built libraries while excluding debug information.
+- Restore compiler optimization for SharpYUV.
 - Use shared SharpYUV libraries.
 - Bundle source-built libpng 1.6.59 and libjpeg-turbo 3.2.0 on Linux.
 
@@ -190,5 +192,7 @@ installed package's `libheif_binary/licenses/` directory.
 
 ### Revision 0
 
-- Bundle libheif, codec libraries, and CLI tools.
+- Bundle libheif, CLI tools, and codec libraries: x264 build 165 (commit
+  `0480cb05fa18`), x265 4.2, libde265 1.1.3, libaom 3.15.1, and SharpYUV from
+  libwebp 1.6.0.
 - Provide library preloading and `libheif-link-cli` for replacing CLI wrappers with symlinks.
