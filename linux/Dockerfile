@@ -8,7 +8,7 @@ FROM manylinux-image AS manylinux-base
 ARG TARGETARCH
 RUN --mount=type=cache,id=manylinux-2-28-dnf-${TARGETARCH},target=/var/cache/dnf,sharing=locked \
     dnf install -y --setopt=keepcache=True \
-        nasm libpng-devel libjpeg-turbo-devel
+        nasm zlib-devel
 
 
 # -------------------------------- musllinux-base --------------------------------------
@@ -16,13 +16,14 @@ FROM musllinux-image AS musllinux-base
 
 RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
     apk add --cache-dir /var/cache/apk \
-        nasm libpng-dev libjpeg-turbo-dev
+        nasm zlib-dev
 
 
 # -------------------------------- build-base ------------------------------------------
 FROM ${BASE}-base AS build-base
 
 ENV PATH="/opt/python/cp314-cp314/bin:${PATH}"
+ENV CFLAGS="-O3 -g0" CXXFLAGS="-O3 -g0"
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 WORKDIR /build/src
 
@@ -57,7 +58,7 @@ RUN . /build/x264.env \
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
     tar xf ../x264.tar.gz --strip-components=1 \
-    && ./configure \
+    && STRIP= ./configure \
         --prefix=/usr/local \
         --libdir=/usr/local/lib \
         --enable-shared \
@@ -84,10 +85,12 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
     && cmake -S source -B ../build \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DLIB_INSTALL_DIR=lib \
         -DENABLE_CLI=OFF \
+        -DENABLE_SHARED=ON \
     && cmake --build ../build -j $(nproc) \
     && DESTDIR=/opt cmake --install ../build \
+    && rm /opt/usr/local/lib/libx265.a \
     && install -D COPYING /opt/usr/local/share/licenses/x265-COPYING \
     && rm -rf /build/*
 
@@ -109,6 +112,7 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DENABLE_ENCODER=OFF \
         -DENABLE_DECODER=OFF \
+        -DENABLE_SDL=OFF \
         -DENABLE_SHERLOCK265=OFF \
     && cmake --build ../build -j $(nproc) \
     && DESTDIR=/opt cmake --install ../build \
@@ -139,6 +143,8 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
         -DENABLE_DOCS=OFF \
     && cmake --build ../build -j $(nproc) \
     && DESTDIR=/opt cmake --install ../build \
+    && rm /opt/usr/local/lib/libaom.a \
+    && rm -rf /opt/usr/local/lib/cmake/AOM \
     && install -D LICENSE /opt/usr/local/share/licenses/aom-LICENSE \
     && install -D PATENTS /opt/usr/local/share/licenses/aom-PATENTS \
     && rm -rf /build/*
@@ -160,11 +166,63 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
         --prefix=/usr/local \
         --libdir=/usr/local/lib \
         --disable-everything \
-        --disable-shared \
+        --enable-shared \
+        --disable-static \
         --disable-threading \
-    && make -C sharpyuv -j $(nproc) CFLAGS='-fPIC' install DESTDIR=/opt \
+    && make -C sharpyuv -j $(nproc) install DESTDIR=/opt \
     && install -D COPYING /opt/usr/local/share/licenses/libwebp-COPYING \
     && install -D PATENTS /opt/usr/local/share/licenses/libwebp-PATENTS \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-libpng ----------------------------------------
+FROM build-base AS build-libpng
+
+COPY versions/libpng.env /build/libpng.env
+
+RUN . /build/libpng.env \
+    && curl -fL "${LIBPNG_URL}" -o ../libpng.tar.gz \
+    && echo "${LIBPNG_SHA256} *../libpng.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../libpng.tar.gz --strip-components=1 \
+    && cmake -B ../build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DPNG_STATIC=OFF \
+        -DPNG_FRAMEWORK=OFF \
+        -DPNG_TESTS=OFF \
+        -DPNG_TOOLS=OFF \
+    && cmake --build ../build -j $(nproc) \
+    && DESTDIR=/opt cmake --install ../build \
+    && install -D LICENSE /opt/usr/local/share/licenses/libpng-LICENSE \
+    && rm -rf /build/*
+
+
+# -------------------------------- build-libjpeg ---------------------------------------
+FROM build-base AS build-libjpeg
+
+COPY versions/libjpeg.env /build/libjpeg.env
+
+RUN . /build/libjpeg.env \
+    && curl -fL "${LIBJPEG_URL}" -o ../libjpeg.tar.gz \
+    && echo "${LIBJPEG_SHA256} *../libjpeg.tar.gz" | sha256sum -c -
+
+RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
+    tar xf ../libjpeg.tar.gz --strip-components=1 \
+    && cmake -B ../build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DENABLE_STATIC=OFF \
+        -DWITH_TURBOJPEG=OFF \
+        -DWITH_TOOLS=OFF \
+        -DWITH_TESTS=OFF \
+    && cmake --build ../build -j $(nproc) \
+    && DESTDIR=/opt cmake --install ../build \
+    && install -D LICENSE.md /opt/usr/local/share/licenses/libjpeg-LICENSE.md \
+    && install -D README.ijg /opt/usr/local/share/licenses/libjpeg-README.ijg \
     && rm -rf /build/*
 
 
@@ -185,6 +243,8 @@ COPY --from=build-x265 /opt/usr/local/ /usr/local/
 COPY --from=build-de265 /opt/usr/local/ /usr/local/
 COPY --from=build-aom /opt/usr/local/ /usr/local/
 COPY --from=build-sharpyuv /opt/usr/local/ /usr/local/
+COPY --from=build-libpng /opt/usr/local/ /usr/local/
+COPY --from=build-libjpeg /opt/usr/local/ /usr/local/
 RUN ldconfig || true
 
 WORKDIR /src/build
@@ -193,6 +253,8 @@ RUN cmake --preset=release-noplugins \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_EXAMPLE_HEIF_THUMB=OFF \
+        -DWITH_EXAMPLE_HEIF_VIEW=OFF \
+        -DBUILD_DOCUMENTATION=OFF \
         .. 2>&1 | tee _configure.log \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
@@ -222,7 +284,7 @@ RUN mkdir -p libheif_binary/bin libheif_binary/licenses libheif_binary/include l
         libheif_binary/include/libheif/heif_version.h \
     && cp -r /usr/local/share/licenses/. libheif_binary/licenses/ \
     && cp -L /usr/local/lib/libheif.so.1 libheif_binary/lib/ \
-    && cc -shared -fPIC -x c /dev/null \
+    && cc $CFLAGS -shared -fPIC -x c /dev/null \
         -L/usr/local/lib \
         -Wl,--no-as-needed -lheif -lc -Wl,--as-needed \
         -Wl,-rpath,'$ORIGIN' \

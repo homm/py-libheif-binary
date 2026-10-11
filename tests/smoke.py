@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory() as directory:
     for suffix, options in (("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"])):
         encoded = work / ("encoded." + suffix)
         decoded = work / (suffix + ".png")
-        subprocess.run(["heif-enc", *options, "-o", str(encoded), str(source)], check=True)
+        subprocess.run(["heif-enc", *options, "--chroma-downsampling", "sharp-yuv", "-o", str(encoded), str(source)], check=True)
         subprocess.run(["heif-dec", str(encoded), str(decoded)], check=True)
         assert struct.unpack(">II", decoded.read_bytes()[16:24]) == (16, 16)
 print("Wheel smoke tests passed:", lib.heif_get_version().decode())

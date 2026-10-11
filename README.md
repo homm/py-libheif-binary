@@ -40,6 +40,12 @@ The native libraries and CLI tools are bundled in the wheel. You do not need
 to install libheif or its codecs separately.
 
 
+## Package version
+
+The package version is `<libheif version>.<packaging revision>`.
+See [Revisions](#revisions) for packaging changes.
+
+
 ## Python API
 
 `get_version_str()` returns the bundled libheif version as a string, such as
@@ -109,7 +115,6 @@ Run it again after reinstalling or upgrading the package.
 
 Run the following commands from the repository root. Wheels are saved in `dist/`.
 Dependency versions and source checksums are pinned in `versions/*.env`.
-The package version is `<libheif version>.<packaging revision>`.
 
 
 ### Linux
@@ -164,3 +169,30 @@ The package includes `libheif`, `x264`, `x265`, `libde265`, `libaom`, `libsharpy
 
 License and patent notices for bundled dependencies are included in the
 installed package's `libheif_binary/licenses/` directory.
+
+
+## Revisions
+
+### Revision 3
+
+- Update libaom from 3.15.1 to 3.15.2.
+- Preserve ordinary symbol tables in all built libraries while excluding debug information.
+- Restore compiler optimization for SharpYUV.
+- Use shared SharpYUV libraries.
+- Bundle source-built libpng 1.6.59 and libjpeg-turbo 3.2.0 on Linux.
+
+### Revision 2
+
+- Bundle libheif headers with the plugin directory cleared.
+- Add `get_build_config()` and expose bundled executable paths.
+
+### Revision 1
+
+- Include README in wheels.
+
+### Revision 0
+
+- Bundle libheif, CLI tools, and codec libraries: x264 build 165 (commit
+  `0480cb05fa18`), x265 4.2, libde265 1.1.3, libaom 3.15.1, and SharpYUV from
+  libwebp 1.6.0.
+- Provide library preloading and `libheif-link-cli` for replacing CLI wrappers with symlinks.
