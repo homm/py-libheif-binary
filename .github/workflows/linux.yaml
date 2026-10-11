@@ -30,9 +30,19 @@ jobs:
         id: buildx
 
       - name: Build and test wheel
-        env:
-          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
-        run: make -C linux ${{ matrix.base }}
+        uses: docker/build-push-action@v7
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: linux/Dockerfile
+          target: wheel
+          platforms: linux/${{ matrix.arch }}
+          build-args: BASE=${{ matrix.base }}
+          tags: libheif-binary:${{ matrix.base }}-wheel
+          load: true
+          outputs: type=local,dest=dist
+          cache-from: type=gha,scope=linux-${{ matrix.base }}-${{ matrix.arch }}
+          cache-to: type=gha,scope=linux-${{ matrix.base }}-${{ matrix.arch }},mode=max
 
       - uses: actions/upload-artifact@v7
         with:
