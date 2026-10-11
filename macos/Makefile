@@ -66,11 +66,11 @@ build/venv: sources/nasm.zip venv.env
 	pip install cmake==$(CMAKE_VERSION) delocate==$(DELOCATE_VERSION) wheel==$(WHEEL_VERSION); \
 	touch "$@"
 
-# Run each build in a fresh temporary directory; install into its versioned prefix.
+# Run each build in a fresh temporary directory; install into its versioned output directory.
 define prepare
 set -euo pipefail; \
 source build/venv/bin/activate; \
-prefix="$(abspath $(basename $@))"; \
+target="$(abspath $(basename $@))"; \
 stamp="$(abspath $@)"; \
 if [ -n "$(1)" ] && [ -f "$$stamp" ] && [ "$$(cat "$$stamp")" = "$(1)" ]; then \
 	printf '\n%s\n' "Skipping $(notdir $(basename $@)): SHA256 matches the .done file"; \
@@ -79,7 +79,7 @@ fi; \
 printf '\n########################\n%s\n########################\n' \
 	"Compiling $(notdir $(basename $@))"; \
 rm -f "$$stamp"; \
-rm -rf "$$prefix"; \
+rm -rf "$$target"; \
 work=$$(mktemp -d); \
 trap 'rm -rf "$$work"' EXIT; \
 tar xf "$(abspath $<)" --strip-components=1 -C "$$work"; \
@@ -90,38 +90,38 @@ build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/
 	@$(call prepare,$(X264_SHA256)) \
 	grep -q '^#define X264_BUILD $(X264_BUILD)$$' x264.h; \
 	STRIP= ./configure \
-		--prefix="$$prefix" \
-		--libdir="$$prefix/lib" \
+		--prefix="$$target" \
+		--libdir="$$target/lib" \
 		--enable-shared \
 		--enable-pic \
 		--disable-cli \
 		--disable-opencl; \
 	make -j $(JOBS); \
 	make install; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp COPYING "$$prefix/share/licenses/x264-COPYING"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp COPYING "$$target/share/licenses/x264-COPYING"; \
 	printf '%s\n' "$(X264_SHA256)" > "$$stamp"
 
 build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | build/venv
 	@$(call prepare,$(X265_SHA256)) \
 	cmake -S source -B build \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX="$$prefix" \
+		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DLIB_INSTALL_DIR=lib \
 		-DENABLE_CLI=OFF \
 		-DENABLE_SHARED=ON; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
-	rm "$$prefix/lib/libx265.a"; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp COPYING "$$prefix/share/licenses/x265-COPYING"; \
+	rm "$$target/lib/libx265.a"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp COPYING "$$target/share/licenses/x265-COPYING"; \
 	printf '%s\n' "$(X265_SHA256)" > "$$stamp"
 
 build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | build/venv
 	@$(call prepare,$(DE265_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX="$$prefix" \
+		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DENABLE_ENCODER=OFF \
 		-DENABLE_DECODER=OFF \
@@ -129,15 +129,15 @@ build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | 
 		-DENABLE_SHERLOCK265=OFF; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp COPYING "$$prefix/share/licenses/libde265-COPYING"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp COPYING "$$target/share/licenses/libde265-COPYING"; \
 	printf '%s\n' "$(DE265_SHA256)" > "$$stamp"
 
 build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/venv
 	@$(call prepare,$(AOM_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX="$$prefix" \
+		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DBUILD_SHARED_LIBS=ON \
 		-DENABLE_TESTS=OFF \
@@ -147,33 +147,33 @@ build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/ve
 		-DENABLE_DOCS=OFF; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
-	rm "$$prefix/lib/libaom.a"; \
-	rm -rf "$$prefix/lib/cmake/AOM"; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp LICENSE "$$prefix/share/licenses/aom-LICENSE"; \
-	cp PATENTS "$$prefix/share/licenses/aom-PATENTS"; \
+	rm "$$target/lib/libaom.a"; \
+	rm -rf "$$target/lib/cmake/AOM"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp LICENSE "$$target/share/licenses/aom-LICENSE"; \
+	cp PATENTS "$$target/share/licenses/aom-PATENTS"; \
 	printf '%s\n' "$(AOM_SHA256)" > "$$stamp"
 
 build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv.tar.gz ../versions/sharpyuv.env | build/venv
 	@$(call prepare,$(WEBP_SHA256)) \
 	./configure \
-		--prefix="$$prefix" \
-		--libdir="$$prefix/lib" \
+		--prefix="$$target" \
+		--libdir="$$target/lib" \
 		--disable-everything \
 		--enable-shared \
 		--disable-static \
 		--disable-threading; \
 	make -C sharpyuv -j $(JOBS) install; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp COPYING "$$prefix/share/licenses/libwebp-COPYING"; \
-	cp PATENTS "$$prefix/share/licenses/libwebp-PATENTS"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp COPYING "$$target/share/licenses/libwebp-COPYING"; \
+	cp PATENTS "$$target/share/licenses/libwebp-PATENTS"; \
 	printf '%s\n' "$(WEBP_SHA256)" > "$$stamp"
 
 build/libpng-$(LIBPNG_VERSION).done: sources/libpng.tar.gz ../versions/libpng.env | build/venv
 	@$(call prepare,$(LIBPNG_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX="$$prefix" \
+		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DPNG_STATIC=OFF \
 		-DPNG_FRAMEWORK=OFF \
@@ -181,15 +181,15 @@ build/libpng-$(LIBPNG_VERSION).done: sources/libpng.tar.gz ../versions/libpng.en
 		-DPNG_TOOLS=OFF; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp LICENSE "$$prefix/share/licenses/libpng-LICENSE"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp LICENSE "$$target/share/licenses/libpng-LICENSE"; \
 	printf '%s\n' "$(LIBPNG_SHA256)" > "$$stamp"
 
 build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpeg.env | build/venv
 	@$(call prepare,$(LIBJPEG_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX="$$prefix" \
+		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
 		-DENABLE_STATIC=OFF \
 		-DWITH_TURBOJPEG=OFF \
@@ -197,9 +197,9 @@ build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpe
 		-DWITH_TESTS=OFF; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp LICENSE.md "$$prefix/share/licenses/libjpeg-LICENSE.md"; \
-	cp README.ijg "$$prefix/share/licenses/libjpeg-README.ijg"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp LICENSE.md "$$target/share/licenses/libjpeg-LICENSE.md"; \
+	cp README.ijg "$$target/share/licenses/libjpeg-README.ijg"; \
 	printf '%s\n' "$(LIBJPEG_SHA256)" > "$$stamp"
 
 DEPENDENCY_PREFIXES := build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
@@ -207,27 +207,27 @@ DEPENDENCY_PREFIXES := build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
     build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
     build/libjpeg-$(LIBJPEG_VERSION)
 
-build/prefix.done: $(addsuffix .done,$(DEPENDENCY_PREFIXES))
-	set -euo pipefail; \
-	rm -rf build/prefix; \
-	mkdir -p build/prefix; \
-	for prefix in $(DEPENDENCY_PREFIXES); do \
-		cp -R "$$prefix/." build/prefix/; \
-	done; \
-	touch "$@"
+define prepare_prefix
+prefix="$(abspath build/prefix)"; \
+rm -rf "$$prefix"; \
+mkdir -p "$$prefix"; \
+for dependency in $(abspath $(DEPENDENCY_PREFIXES)); do \
+	cp -R "$$dependency/." "$$prefix/"; \
+done;
+endef
 
 build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libheif.env \
-        build/prefix.done | build/venv
+        $(addsuffix .done,$(DEPENDENCY_PREFIXES)) | build/venv
 	@$(prepare) \
-	build="$(abspath build/prefix)"; \
+	$(prepare_prefix) \
 	cmake --preset=release-noplugins -B build \
-		-DCMAKE_INSTALL_PREFIX="$$prefix" \
+		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DCMAKE_INSTALL_LIBDIR=lib \
-		-DCMAKE_PREFIX_PATH="$$build" \
+		-DCMAKE_PREFIX_PATH="$$prefix" \
 		-DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
-		-DCMAKE_INCLUDE_PATH="$$build/include/webp" \
+		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
 		-DWITH_EXAMPLE_HEIF_THUMB=OFF \
 		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
 		-DBUILD_DOCUMENTATION=OFF \
@@ -242,33 +242,34 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 	grep -q "'aomenc' as built-in backend" _configure.log; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
-	mkdir -p "$$prefix/share/licenses"; \
-	cp COPYING "$$prefix/share/licenses/libheif-COPYING"; \
-	cp -R "$$prefix/." "$$build/"; \
+	mkdir -p "$$target/share/licenses"; \
+	cp COPYING "$$target/share/licenses/libheif-COPYING"; \
+	cp -R "$$target/." "$$prefix/"; \
 	printf '%s\n' "$(LIBHEIF_SHA256)" > "$$stamp"
 
 .PHONY: wheel
 wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	# Prepare package files.
-	set -euo pipefail; \
-	build=build/prefix; \
-	target=build/wheel/libheif_binary; \
-	rm -rf build/wheel; \
-	mkdir -p build/wheel; \
-	cp ../pyproject.toml ../setup.py ../README.md build/wheel/; \
-	cp -r ../libheif_binary build/wheel/; \
+	@set -euo pipefail; \
+	$(prepare_prefix) \
+	cp -R "build/libheif-$(LIBHEIF_VERSION)/." "$$prefix/"; \
+	wheel_root=build/wheel; \
+	rm -rf $$wheel_root; \
+	mkdir -p $$wheel_root; \
+	cp -r ../libheif_binary ../pyproject.toml ../setup.py ../README.md $$wheel_root; \
+	target=$$wheel_root/libheif_binary; \
 	mkdir -p $$target/bin $$target/licenses $$target/include; \
 	sed -n 's/^#define LIBHEIF_VERSION "\([^" ]*\)"/\1/p' \
-		$$build/include/libheif/heif_version.h > $$target/LIBVERSION; \
+		$$prefix/include/libheif/heif_version.h > $$target/LIBVERSION; \
 	test -s $$target/LIBVERSION; \
-	cp -r $$build/include/libheif $$target/include/; \
+	cp -r $$prefix/include/libheif $$target/include/; \
 	sed -i '' 's/^#define LIBHEIF_PLUGIN_DIRECTORY .*/#define LIBHEIF_PLUGIN_DIRECTORY ""/' \
 		$$target/include/libheif/heif_version.h; \
-	cp $$build/share/licenses/* $$target/licenses/; \
-	cp $$build/bin/heif-enc $$build/bin/heif-dec $$build/bin/heif-info $$target/bin/
+	cp $$prefix/share/licenses/* $$target/licenses/; \
+	cp $$prefix/bin/heif-enc $$prefix/bin/heif-dec $$prefix/bin/heif-info $$target/bin/
 
 	# Build the initial wheel and bundle dependencies
-	set -euo pipefail; \
+	@set -euo pipefail; \
 	source build/venv/bin/activate; \
 	platform=$$(python -c 'import platform, sysconfig; print(sysconfig.get_platform().rsplit("-", 1)[0] + "-" + platform.machine())'); \
 	pip wheel ./build/wheel -w build/wheel \
@@ -277,7 +278,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 		delocate-wheel -L lib build/wheel/*.whl
 
 	# Restore the stable libheif install ID and repack
-	set -euo pipefail; \
+	@set -euo pipefail; \
 	source build/venv/bin/activate; \
 	wheel unpack build/wheel/*.whl -d build/wheel/unpacked; \
 	set -- build/wheel/unpacked/*/libheif_binary/lib/libheif.*.dylib; dylib=$$1; \
@@ -287,7 +288,7 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	wheel pack build/wheel/unpacked/* -d ../dist
 
 	# Test the installed wheel in a fresh temporary environment.
-	set -euo pipefail; \
+	@set -euo pipefail; \
 	smoke_venv=$$(mktemp -d); \
 	trap 'rm -rf "$$smoke_venv"' EXIT; \
 	python3 -m venv "$$smoke_venv"; \
