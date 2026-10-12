@@ -10,7 +10,7 @@ include ../versions/*.env venv.env
 JOBS := $(shell sysctl -n hw.ncpu)
 
 .PHONY: libs x264 x265 de265 aom sharpyuv libpng libjpeg libheif
-libs: x264 x265 de265 aom sharpyuv libpng libjpeg
+libs: x265 de265 aom sharpyuv libpng libjpeg
 x264: build/x264-$(X264_BUILD).done
 x265: build/x265-$(X265_VERSION).done
 de265: build/de265-$(DE265_VERSION).done
@@ -104,11 +104,23 @@ build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/
 
 build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | build/venv
 	@$(call prepare,$(X265_SHA256)) \
-	cmake -S source -B build \
+	x265_options=( \
 		-DCMAKE_BUILD_TYPE=Release \
+		-DENABLE_CLI=OFF \
+		-DCMAKE_ASM_NASM_FLAGS="--pragma \"macho build_version macos,11,0\""); \
+	for depth in 10 12; do \
+		cmake -S source -B build-$$depth "$${x265_options[@]}" \
+			-DHIGH_BIT_DEPTH=ON -DMAIN12=$$((depth == 12)) \
+			-DEXPORT_C_API=OFF -DENABLE_SHARED=OFF \
+			-DENABLE_PIC=ON; \
+		cmake --build build-$$depth -j $(JOBS); \
+	done; \
+	cmake -S source -B build "$${x265_options[@]}" \
 		-DCMAKE_INSTALL_PREFIX="$$target" \
 		-DLIB_INSTALL_DIR=lib \
-		-DENABLE_CLI=OFF \
+		-DHIGH_BIT_DEPTH=OFF \
+		-DLINKED_10BIT=ON -DLINKED_12BIT=ON \
+		-DEXTRA_LIB="$$work/build-10/libx265.a;$$work/build-12/libx265.a" \
 		-DENABLE_SHARED=ON; \
 	cmake --build build -j $(JOBS); \
 	cmake --install build; \
@@ -202,7 +214,7 @@ build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpe
 	cp README.ijg "$$target/share/licenses/libjpeg-README.ijg"; \
 	printf '%s\n' "$(LIBJPEG_SHA256)" > "$$stamp"
 
-DEPENDENCY_PREFIXES := build/x264-$(X264_BUILD) build/x265-$(X265_VERSION) \
+DEPENDENCY_PREFIXES := build/x265-$(X265_VERSION) \
     build/de265-$(DE265_VERSION) build/aom-$(AOM_VERSION) \
     build/sharpyuv-$(WEBP_VERSION) build/libpng-$(LIBPNG_VERSION) \
     build/libjpeg-$(LIBJPEG_VERSION)
@@ -228,6 +240,9 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 		-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=ON \
 		-DCMAKE_DISABLE_FIND_PACKAGE_WEBP=ON \
 		-DCMAKE_INCLUDE_PATH="$$prefix/include/webp" \
+		-DWITH_X264=OFF \
+		-DWITH_JPEG_ENCODER=ON \
+		-DWITH_JPEG_DECODER=ON \
 		-DWITH_EXAMPLE_HEIF_THUMB=OFF \
 		-DWITH_EXAMPLE_HEIF_VIEW=OFF \
 		-DBUILD_DOCUMENTATION=OFF \
@@ -235,7 +250,8 @@ build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libhei
 	grep -q 'Found PNG:' _configure.log; \
 	grep -q 'Found JPEG:' _configure.log; \
 	grep -q 'Found libsharpyuv:' _configure.log; \
-	grep -q "'x264' as built-in backend" _configure.log; \
+	grep -q "'jpegenc' as built-in backend" _configure.log; \
+	grep -q "'jpegdec' as built-in backend" _configure.log; \
 	grep -q "'x265' as built-in backend" _configure.log; \
 	grep -q "'libde265' as built-in backend" _configure.log; \
 	grep -q "'aomdec' as built-in backend" _configure.log; \

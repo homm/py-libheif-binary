@@ -82,11 +82,22 @@ RUN . /build/x265.env \
 
 RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,sharing=locked \
     tar xf ../x265.tar.gz --strip-components=1 \
-    && cmake -S source -B ../build \
+    && x265_options=( \
         -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_CLI=OFF) \
+    && for depth in 10 12; do \
+        cmake -S source -B ../build-${depth} "${x265_options[@]}" \
+            -DHIGH_BIT_DEPTH=ON -DMAIN12=$((depth == 12)) \
+            -DEXPORT_C_API=OFF -DENABLE_SHARED=OFF \
+            -DENABLE_PIC=ON || exit; \
+        cmake --build ../build-${depth} -j $(nproc) || exit; \
+    done \
+    && cmake -S source -B ../build "${x265_options[@]}" \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DLIB_INSTALL_DIR=lib \
-        -DENABLE_CLI=OFF \
+        -DHIGH_BIT_DEPTH=OFF \
+        -DLINKED_10BIT=ON -DLINKED_12BIT=ON \
+        -DEXTRA_LIB="/build/build-10/libx265.a;/build/build-12/libx265.a" \
         -DENABLE_SHARED=ON \
     && cmake --build ../build -j $(nproc) \
     && DESTDIR=/opt cmake --install ../build \
@@ -238,7 +249,6 @@ RUN . /build/libheif.env \
     && tar xf ../libheif.tar.gz --strip-components=1 -C /src \
     && rm -rf /build/*
 
-COPY --from=build-x264 /opt/usr/local/ /usr/local/
 COPY --from=build-x265 /opt/usr/local/ /usr/local/
 COPY --from=build-de265 /opt/usr/local/ /usr/local/
 COPY --from=build-aom /opt/usr/local/ /usr/local/
@@ -252,6 +262,9 @@ WORKDIR /src/build
 RUN cmake --preset=release-noplugins \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWITH_X264=OFF \
+        -DWITH_JPEG_ENCODER=ON \
+        -DWITH_JPEG_DECODER=ON \
         -DWITH_EXAMPLE_HEIF_THUMB=OFF \
         -DWITH_EXAMPLE_HEIF_VIEW=OFF \
         -DBUILD_DOCUMENTATION=OFF \
@@ -259,7 +272,8 @@ RUN cmake --preset=release-noplugins \
     && grep -q 'Found PNG:' _configure.log \
     && grep -q 'Found JPEG:' _configure.log \
     && grep -q 'Found libsharpyuv:' _configure.log \
-    && grep -q "'x264' as built-in backend" _configure.log \
+    && grep -q "'jpegenc' as built-in backend" _configure.log \
+    && grep -q "'jpegdec' as built-in backend" _configure.log \
     && grep -q "'x265' as built-in backend" _configure.log \
     && grep -q "'libde265' as built-in backend" _configure.log \
     && grep -q "'aomdec' as built-in backend" _configure.log \
