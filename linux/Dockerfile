@@ -99,6 +99,7 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
         -DLINKED_10BIT=ON -DLINKED_12BIT=ON \
         -DEXTRA_LIB="/build/build-10/libx265.a;/build/build-12/libx265.a" \
         -DENABLE_SHARED=ON \
+    && cmake --build ../build --target x265-static -j $(nproc) \
     && cmake --build ../build -j $(nproc) \
     && DESTDIR=/opt cmake --install ../build \
     && rm /opt/usr/local/lib/libx265.a \
