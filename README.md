@@ -164,14 +164,30 @@ Use `examples/example.heic` from the pinned libheif source release.
 
 ## Bundled libraries and licenses
 
-The package includes `libheif`, `x264`, `x265`, `libde265`, `libaom`, `libsharpyuv`,
+The package includes `libheif`, `x265`, `libde265`, `libaom`, `libsharpyuv`,
 `libpng` and `libjpeg-turbo`.
+
+| Format | Encoders | Decoders |
+| --- | --- | --- |
+| HEVC / HEIC | x265 | libde265 |
+| AV1 / AVIF | libaom | libaom |
+| JPEG in HEIF | libjpeg-turbo | libjpeg-turbo |
+
+HEIC and AVIF support 8-, 10- and 12-bit encoding and decoding.
+
+See [ROADMAP.md](ROADMAP.md) for the proposed extended bundle.
 
 License and patent notices for bundled dependencies are included in the
 installed package's `libheif_binary/licenses/` directory.
 
 
 ## Revisions
+
+### Revision 4
+
+- Disable x264.
+- Enable JPEG-in-HEIF encoding and decoding with libjpeg-turbo.
+- Enable 10- and 12-bit encoding for x265.
 
 ### Revision 3
 

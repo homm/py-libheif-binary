@@ -50,8 +50,13 @@ for name in ("heif-enc", "heif-dec", "heif-info"):
     assert executable.resolve() == (package / "bin" / name).resolve()
     subprocess.run([name, "--help"], check=True)
 encoders = subprocess.check_output(["heif-enc", "--list-encoders"], universal_newlines=True)
-for encoder in ("x264", "x265", "aom"):
+for encoder in ("x265", "aom", "jpeg"):
     assert encoder in encoders, encoders
+
+assert "x264" not in encoders, encoders
+decoders = subprocess.check_output(["heif-dec", "--list-decoders"], universal_newlines=True)
+for decoder in ("libde265", "aom", "jpeg"):
+    assert decoder in decoders, decoders
 
 
 def png_chunk(kind, data):
@@ -72,10 +77,25 @@ with tempfile.TemporaryDirectory() as directory:
     png += png_chunk(b"IEND", b"")
     source = work / "input.png"
     source.write_bytes(png)
-    for suffix, options in (("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"])):
+    for suffix, options in (("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"]), ("heif", ["--jpeg", "-e", "jpeg"])):
         encoded = work / ("encoded." + suffix)
         decoded = work / (suffix + ".png")
         subprocess.run(["heif-enc", *options, "--chroma-downsampling", "sharp-yuv", "-o", str(encoded), str(source)], check=True)
         subprocess.run(["heif-dec", str(encoded), str(decoded)], check=True)
         assert struct.unpack(">II", decoded.read_bytes()[16:24]) == (16, 16)
+    png = b"\x89PNG\r\n\x1a\n"
+    png += png_chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 16, 2, 0, 0, 0))
+    png += png_chunk(b"IDAT", zlib.compress((b"\0" + struct.pack(">HHH", 32768, 16384, 8192) * 16) * 16))
+    png += png_chunk(b"IEND", b"")
+    source.write_bytes(png)
+    for suffix, options in (("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"])):
+        for depth in (10, 12):
+            encoded = work / ("encoded-" + str(depth) + "." + suffix)
+            decoded = work / ("decoded-" + str(depth) + "-" + suffix + ".png")
+            subprocess.run(["heif-enc", *options, "-b", str(depth), "-o", str(encoded), str(source)], check=True)
+            info = subprocess.check_output(["heif-info", str(encoded)], universal_newlines=True)
+            assert "bit depth: " + str(depth) + "\n" in info, info
+            subprocess.run(["heif-dec", str(encoded), str(decoded)], check=True)
+            assert struct.unpack(">II", decoded.read_bytes()[16:24]) == (16, 16)
+            assert decoded.read_bytes()[24] == 16
 print("Wheel smoke tests passed:", lib.heif_get_version().decode())
