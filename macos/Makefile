@@ -7,7 +7,7 @@ export CFLAGS := -O3 -g0
 export CXXFLAGS := -O3 -g0
 include ../versions/*.env venv.env
 
-JOBS := $(shell sysctl -n hw.ncpu)
+JOBS := $(shell sysctl -n hw.physicalcpu)
 
 .PHONY: libs x264 x265 de265 aom sharpyuv libpng libjpeg libheif
 libs: x265 de265 aom sharpyuv libpng libjpeg
@@ -20,24 +20,32 @@ libpng: build/libpng-$(LIBPNG_VERSION).done
 libjpeg: build/libjpeg-$(LIBJPEG_VERSION).done
 libheif: build/libheif-$(LIBHEIF_VERSION).done
 
-sources/x264.tar.gz: URL := $(X264_URL)
-sources/x264.tar.gz: SHA256 := $(X264_SHA256)
-sources/x265.tar.gz: URL := $(X265_URL)
-sources/x265.tar.gz: SHA256 := $(X265_SHA256)
-sources/de265.tar.gz: URL := $(DE265_URL)
-sources/de265.tar.gz: SHA256 := $(DE265_SHA256)
-sources/aom.tar.gz: URL := $(AOM_URL)
-sources/aom.tar.gz: SHA256 := $(AOM_SHA256)
-sources/sharpyuv.tar.gz: URL := $(WEBP_URL)
-sources/sharpyuv.tar.gz: SHA256 := $(WEBP_SHA256)
-sources/libpng.tar.gz: URL := $(LIBPNG_URL)
-sources/libpng.tar.gz: SHA256 := $(LIBPNG_SHA256)
-sources/libjpeg.tar.gz: URL := $(LIBJPEG_URL)
-sources/libjpeg.tar.gz: SHA256 := $(LIBJPEG_SHA256)
-sources/libheif.tar.gz: URL := $(LIBHEIF_URL)
-sources/libheif.tar.gz: SHA256 := $(LIBHEIF_SHA256)
+sources/x264-$(X264_BUILD).tar.gz: ../versions/x264.env
+sources/x264-$(X264_BUILD).tar.gz: URL := $(X264_URL)
+sources/x264-$(X264_BUILD).tar.gz: SHA256 := $(X264_SHA256)
+sources/x265-$(X265_VERSION).tar.gz: ../versions/x265.env
+sources/x265-$(X265_VERSION).tar.gz: URL := $(X265_URL)
+sources/x265-$(X265_VERSION).tar.gz: SHA256 := $(X265_SHA256)
+sources/de265-$(DE265_VERSION).tar.gz: ../versions/de265.env
+sources/de265-$(DE265_VERSION).tar.gz: URL := $(DE265_URL)
+sources/de265-$(DE265_VERSION).tar.gz: SHA256 := $(DE265_SHA256)
+sources/aom-$(AOM_VERSION).tar.gz: ../versions/aom.env
+sources/aom-$(AOM_VERSION).tar.gz: URL := $(AOM_URL)
+sources/aom-$(AOM_VERSION).tar.gz: SHA256 := $(AOM_SHA256)
+sources/sharpyuv-$(WEBP_VERSION).tar.gz: ../versions/sharpyuv.env
+sources/sharpyuv-$(WEBP_VERSION).tar.gz: URL := $(WEBP_URL)
+sources/sharpyuv-$(WEBP_VERSION).tar.gz: SHA256 := $(WEBP_SHA256)
+sources/libpng-$(LIBPNG_VERSION).tar.gz: ../versions/libpng.env
+sources/libpng-$(LIBPNG_VERSION).tar.gz: URL := $(LIBPNG_URL)
+sources/libpng-$(LIBPNG_VERSION).tar.gz: SHA256 := $(LIBPNG_SHA256)
+sources/libjpeg-$(LIBJPEG_VERSION).tar.gz: ../versions/libjpeg.env
+sources/libjpeg-$(LIBJPEG_VERSION).tar.gz: URL := $(LIBJPEG_URL)
+sources/libjpeg-$(LIBJPEG_VERSION).tar.gz: SHA256 := $(LIBJPEG_SHA256)
+sources/libheif-$(LIBHEIF_VERSION).tar.gz: ../versions/libheif.env
+sources/libheif-$(LIBHEIF_VERSION).tar.gz: URL := $(LIBHEIF_URL)
+sources/libheif-$(LIBHEIF_VERSION).tar.gz: SHA256 := $(LIBHEIF_SHA256)
 
-sources/%.tar.gz: ../versions/%.env | sources
+sources/%.tar.gz: | sources
 	@set -euo pipefail; \
 	if ! printf '%s  %s\n' "$(SHA256)" "$@" | sha256sum -c - >/dev/null 2>&1; then \
 		curl -fL "$(URL)" -o "$@"; \
@@ -45,7 +53,7 @@ sources/%.tar.gz: ../versions/%.env | sources
 	fi; \
 	touch "$@"
 
-sources/nasm.zip: venv.env | sources
+sources/nasm-$(NASM_VERSION).zip: venv.env | sources
 	@set -euo pipefail; \
 	if ! printf '%s  %s\n' "$(NASM_SHA256)" "$@" | sha256sum -c - >/dev/null 2>&1; then \
 		curl -fL "$(NASM_URL)" -o "$@"; \
@@ -56,7 +64,7 @@ sources/nasm.zip: venv.env | sources
 sources:
 	mkdir -p "$@"
 
-build/venv: sources/nasm.zip venv.env
+build/venv: sources/nasm-$(NASM_VERSION).zip venv.env
 	set -euo pipefail; \
 	trap 'rm -rf "$@"' ERR; \
 	python3 -m venv "$@"; \
@@ -86,7 +94,7 @@ tar xf "$(abspath $<)" --strip-components=1 -C "$$work"; \
 cd "$$work";
 endef
 
-build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/venv
+build/x264-$(X264_BUILD).done: sources/x264-$(X264_BUILD).tar.gz ../versions/x264.env | build/venv
 	@$(call prepare,$(X264_SHA256)) \
 	grep -q '^#define X264_BUILD $(X264_BUILD)$$' x264.h; \
 	STRIP= ./configure \
@@ -102,7 +110,7 @@ build/x264-$(X264_BUILD).done: sources/x264.tar.gz ../versions/x264.env | build/
 	cp COPYING "$$target/share/licenses/x264-COPYING"; \
 	printf '%s\n' "$(X264_SHA256)" > "$$stamp"
 
-build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | build/venv
+build/x265-$(X265_VERSION).done: sources/x265-$(X265_VERSION).tar.gz ../versions/x265.env | build/venv
 	@$(call prepare,$(X265_SHA256)) \
 	x265_options=( \
 		-DCMAKE_BUILD_TYPE=Release \
@@ -129,7 +137,7 @@ build/x265-$(X265_VERSION).done: sources/x265.tar.gz ../versions/x265.env | buil
 	cp COPYING "$$target/share/licenses/x265-COPYING"; \
 	printf '%s\n' "$(X265_SHA256)" > "$$stamp"
 
-build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | build/venv
+build/de265-$(DE265_VERSION).done: sources/de265-$(DE265_VERSION).tar.gz ../versions/de265.env | build/venv
 	@$(call prepare,$(DE265_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
@@ -145,7 +153,7 @@ build/de265-$(DE265_VERSION).done: sources/de265.tar.gz ../versions/de265.env | 
 	cp COPYING "$$target/share/licenses/libde265-COPYING"; \
 	printf '%s\n' "$(DE265_SHA256)" > "$$stamp"
 
-build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/venv
+build/aom-$(AOM_VERSION).done: sources/aom-$(AOM_VERSION).tar.gz ../versions/aom.env | build/venv
 	@$(call prepare,$(AOM_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
@@ -166,7 +174,7 @@ build/aom-$(AOM_VERSION).done: sources/aom.tar.gz ../versions/aom.env | build/ve
 	cp PATENTS "$$target/share/licenses/aom-PATENTS"; \
 	printf '%s\n' "$(AOM_SHA256)" > "$$stamp"
 
-build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv.tar.gz ../versions/sharpyuv.env | build/venv
+build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv-$(WEBP_VERSION).tar.gz ../versions/sharpyuv.env | build/venv
 	@$(call prepare,$(WEBP_SHA256)) \
 	./configure \
 		--prefix="$$target" \
@@ -181,7 +189,7 @@ build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv.tar.gz ../versions/sharpyu
 	cp PATENTS "$$target/share/licenses/libwebp-PATENTS"; \
 	printf '%s\n' "$(WEBP_SHA256)" > "$$stamp"
 
-build/libpng-$(LIBPNG_VERSION).done: sources/libpng.tar.gz ../versions/libpng.env | build/venv
+build/libpng-$(LIBPNG_VERSION).done: sources/libpng-$(LIBPNG_VERSION).tar.gz ../versions/libpng.env | build/venv
 	@$(call prepare,$(LIBPNG_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
@@ -197,7 +205,7 @@ build/libpng-$(LIBPNG_VERSION).done: sources/libpng.tar.gz ../versions/libpng.en
 	cp LICENSE "$$target/share/licenses/libpng-LICENSE"; \
 	printf '%s\n' "$(LIBPNG_SHA256)" > "$$stamp"
 
-build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg.tar.gz ../versions/libjpeg.env | build/venv
+build/libjpeg-$(LIBJPEG_VERSION).done: sources/libjpeg-$(LIBJPEG_VERSION).tar.gz ../versions/libjpeg.env | build/venv
 	@$(call prepare,$(LIBJPEG_SHA256)) \
 	cmake -S . -B build \
 		-DCMAKE_BUILD_TYPE=Release \
@@ -228,7 +236,7 @@ for dependency in $(abspath $(DEPENDENCY_PREFIXES)); do \
 done;
 endef
 
-build/libheif-$(LIBHEIF_VERSION).done: sources/libheif.tar.gz ../versions/libheif.env \
+build/libheif-$(LIBHEIF_VERSION).done: sources/libheif-$(LIBHEIF_VERSION).tar.gz ../versions/libheif.env \
         $(addsuffix .done,$(DEPENDENCY_PREFIXES)) | build/venv
 	@$(prepare) \
 	$(prepare_prefix) \
@@ -310,6 +318,6 @@ wheel: build/libheif-$(LIBHEIF_VERSION).done | build/venv
 	python3 -m venv "$$smoke_venv"; \
 	source "$$smoke_venv/bin/activate"; \
 	pip install "../dist/$$(basename build/wheel/*.whl)"; \
-	tar -xOf sources/libheif.tar.gz \
+	tar -xOf sources/libheif-$(LIBHEIF_VERSION).tar.gz \
 		"libheif-$(LIBHEIF_VERSION)/examples/example.heic" > build/example.heic; \
 	python ../tests/smoke.py build/example.heic
