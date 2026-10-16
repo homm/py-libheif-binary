@@ -1,6 +1,6 @@
 import ctypes
-import threading
 import tempfile
+import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -43,7 +43,9 @@ class BuildConfigTest(unittest.TestCase):
             for version in ("1.17.6", "1.23.6"):
                 with self.subTest(version=version):
                     (package / "LIBVERSION").write_text(version + "\n")
-                    with patch.object(libheif_binary.sys, "platform", "darwin"), patch.object(
+                    with patch.object(
+                        libheif_binary.sys, "platform", "darwin"
+                    ), patch.object(
                         libheif_binary, "PACKAGE_DIR", package
                     ):
                         self.assertEqual(libheif_binary.get_build_config(), {
@@ -74,7 +76,8 @@ class LoadLibraryTest(unittest.TestCase):
     def test_each_call_returns_its_own_library_object(self):
         handles = [object(), object()]
         with patch.object(
-            libheif_binary, "PACKAGE_DIR", Path("/different/site-packages/libheif_binary").resolve()
+            libheif_binary, "PACKAGE_DIR",
+            Path("/different/site-packages/libheif_binary").resolve()
         ), patch.object(ctypes, "CDLL", side_effect=handles) as load:
             first = libheif_binary.load_library()
             second = libheif_binary.load_library()
@@ -82,7 +85,9 @@ class LoadLibraryTest(unittest.TestCase):
             self.assertIs(second, handles[1])
             self.assertIsNot(first, second)
             expected = call(
-                str(Path("/different/site-packages/libheif_binary/lib/libheif-loader.so").resolve()),
+                str(Path(
+                    "/different/site-packages/libheif_binary/lib/libheif-loader.so"
+                ).resolve()),
                 mode=ctypes.RTLD_GLOBAL,
             )
             self.assertEqual(load.call_args_list, [expected, expected])

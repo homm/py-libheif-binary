@@ -34,3 +34,15 @@ collect_dist:
 		trap - EXIT; \
 		printf 'downloaded: %s\n' "$$name"; \
 	done
+
+.PHONY: lint
+lint:
+	isort --check-only --diff ./libheif_binary ./tests
+	flake8 ./libheif_binary ./tests
+
+.PHONY: test
+test:
+	pytest tests -v
+
+.PHONY: check
+check: lint test

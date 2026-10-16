@@ -77,7 +77,10 @@ def link_cli():
             executable = binaries / name
             action = f"check binary {executable}"
             if not executable.is_file():
-                sys.exit(f"Cannot link CLI: binary missing or not a regular file: {executable}")
+                sys.exit(
+                    "Cannot link CLI: binary missing or not a regular file: "
+                    f"{executable}"
+                )
         action = f"create temporary links in {scripts}"
         with tempfile.TemporaryDirectory(dir=scripts) as directory:
             for name in EXECUTABLES:

@@ -16,7 +16,8 @@ class ExecutableTest(unittest.TestCase):
                 for name in ("heif-enc", "heif-dec", "heif-info"):
                     with self.subTest(name=name):
                         self.assertEqual(
-                            libheif_binary.get_executable(name), str(package / "bin" / name)
+                            libheif_binary.get_executable(name),
+                            str(package / "bin" / name),
                         )
 
     def test_unknown_commands_and_paths_raise_value_error(self):
@@ -32,8 +33,11 @@ class ExecutableTest(unittest.TestCase):
         ):
             with self.subTest(name=name), patch.object(
                 libheif_binary, "get_executable", return_value="/bundled/bin/" + name
-            ) as executable, patch.object(libheif_binary.os, "execv") as execute, patch.object(
-                libheif_binary.sys, "argv", ["wrapper", "--help", "file with spaces.heic"]
+            ) as executable, patch.object(
+                libheif_binary.os, "execv"
+            ) as execute, patch.object(
+                libheif_binary.sys, "argv",
+                ["wrapper", "--help", "file with spaces.heic"],
             ):
                 wrapper()
                 executable.assert_called_once_with(name)
@@ -56,7 +60,9 @@ class LinkCliTest(unittest.TestCase):
             for name in names:
                 (scripts / name).write_text("wrapper")
                 (binaries / name).write_text("binary")
-            with patch.object(libheif_binary, "PACKAGE_DIR", package.resolve()), patch.object(
+            with patch.object(
+                libheif_binary, "PACKAGE_DIR", package.resolve()
+            ), patch.object(
                 sysconfig, "get_path", return_value=str(scripts)
             ):
                 libheif_binary.link_cli()
@@ -69,7 +75,9 @@ class LinkCliTest(unittest.TestCase):
                 self.assertFalse(os.path.isabs(os.readlink(link)))
                 self.assertEqual(
                     link.resolve(),
-                    (moved / "lib/python3.14/site-packages/libheif_binary/bin" / name).resolve(),
+                    (
+                        moved / "lib/python3.14/site-packages/libheif_binary/bin" / name
+                    ).resolve(),
                 )
 
     def test_missing_binary_leaves_wrappers_unchanged(self):
@@ -78,7 +86,9 @@ class LinkCliTest(unittest.TestCase):
             scripts.mkdir()
             wrapper = scripts / "heif-enc"
             wrapper.write_text("wrapper")
-            with patch.object(libheif_binary, "PACKAGE_DIR", Path(directory) / "package"), patch.object(
+            with patch.object(
+                libheif_binary, "PACKAGE_DIR", Path(directory) / "package"
+            ), patch.object(
                 sysconfig, "get_path", return_value=str(scripts)
             ):
                 with self.assertRaisesRegex(SystemExit, "binary missing.*heif-enc"):
@@ -90,13 +100,21 @@ class LinkCliTest(unittest.TestCase):
             tempfile, "TemporaryDirectory",
             side_effect=PermissionError(13, "Permission denied", "/venv/bin"),
         ):
-            with self.assertRaisesRegex(SystemExit, "create temporary links.*permission denied.*ownership"):
+            with self.assertRaisesRegex(
+                SystemExit, "create temporary links.*permission denied.*ownership"
+            ):
                 libheif_binary.link_cli()
 
     def test_replacement_error_names_destination(self):
         with tempfile.TemporaryDirectory() as directory:
-            with patch.object(sysconfig, "get_path", return_value=directory), patch.object(
+            with patch.object(
+                sysconfig, "get_path", return_value=directory
+            ), patch.object(
                 Path, "is_file", return_value=True
-            ), patch.object(Path, "replace", side_effect=OSError(30, "Read-only file system")):
-                with self.assertRaisesRegex(SystemExit, "replace .*heif-enc.*Read-only file system"):
+            ), patch.object(
+                Path, "replace", side_effect=OSError(30, "Read-only file system")
+            ):
+                with self.assertRaisesRegex(
+                    SystemExit, "replace .*heif-enc.*Read-only file system"
+                ):
                     libheif_binary.link_cli()

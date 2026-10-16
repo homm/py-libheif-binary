@@ -9,6 +9,13 @@ description = "Prebuilt libheif, codecs and command-line tools"
 readme = "README.md"
 requires-python = ">=3.6"
 
+[dependency-groups]
+dev = [
+    "flake8>=7.3.0",
+    "isort>=8.0.1",
+    "pytest>=9.1.1",
+]
+
 [project.scripts]
 heif-enc = "libheif_binary:heif_enc"
 heif-dec = "libheif_binary:heif_dec"
@@ -20,3 +27,6 @@ packages = ["libheif_binary"]
 
 [tool.setuptools.package-data]
 libheif_binary = ["bin/*", "lib/*", "licenses/*", "include/libheif/*.h", "LIBVERSION"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

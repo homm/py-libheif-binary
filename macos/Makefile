@@ -21,29 +21,17 @@ libjpeg: build/libjpeg-$(LIBJPEG_VERSION).done
 libheif: build/libheif-$(LIBHEIF_VERSION).done
 
 sources/x264-$(X264_BUILD).tar.gz: ../versions/x264.env
-sources/x264-$(X264_BUILD).tar.gz: URL := $(X264_URL)
-sources/x264-$(X264_BUILD).tar.gz: SHA256 := $(X264_SHA256)
 sources/x265-$(X265_VERSION).tar.gz: ../versions/x265.env
-sources/x265-$(X265_VERSION).tar.gz: URL := $(X265_URL)
-sources/x265-$(X265_VERSION).tar.gz: SHA256 := $(X265_SHA256)
 sources/de265-$(DE265_VERSION).tar.gz: ../versions/de265.env
-sources/de265-$(DE265_VERSION).tar.gz: URL := $(DE265_URL)
-sources/de265-$(DE265_VERSION).tar.gz: SHA256 := $(DE265_SHA256)
 sources/aom-$(AOM_VERSION).tar.gz: ../versions/aom.env
-sources/aom-$(AOM_VERSION).tar.gz: URL := $(AOM_URL)
-sources/aom-$(AOM_VERSION).tar.gz: SHA256 := $(AOM_SHA256)
-sources/sharpyuv-$(WEBP_VERSION).tar.gz: ../versions/sharpyuv.env
-sources/sharpyuv-$(WEBP_VERSION).tar.gz: URL := $(WEBP_URL)
-sources/sharpyuv-$(WEBP_VERSION).tar.gz: SHA256 := $(WEBP_SHA256)
+sources/webp-$(WEBP_VERSION).tar.gz: ../versions/webp.env
 sources/libpng-$(LIBPNG_VERSION).tar.gz: ../versions/libpng.env
-sources/libpng-$(LIBPNG_VERSION).tar.gz: URL := $(LIBPNG_URL)
-sources/libpng-$(LIBPNG_VERSION).tar.gz: SHA256 := $(LIBPNG_SHA256)
 sources/libjpeg-$(LIBJPEG_VERSION).tar.gz: ../versions/libjpeg.env
-sources/libjpeg-$(LIBJPEG_VERSION).tar.gz: URL := $(LIBJPEG_URL)
-sources/libjpeg-$(LIBJPEG_VERSION).tar.gz: SHA256 := $(LIBJPEG_SHA256)
 sources/libheif-$(LIBHEIF_VERSION).tar.gz: ../versions/libheif.env
-sources/libheif-$(LIBHEIF_VERSION).tar.gz: URL := $(LIBHEIF_URL)
-sources/libheif-$(LIBHEIF_VERSION).tar.gz: SHA256 := $(LIBHEIF_SHA256)
+
+sources/%.tar.gz: PREFIX = $(shell printf '%s' '$(firstword $(subst -, ,$*))' | tr '[:lower:]' '[:upper:]')
+sources/%.tar.gz: URL = $($(PREFIX)_URL)
+sources/%.tar.gz: SHA256 = $($(PREFIX)_SHA256)
 
 sources/%.tar.gz: | sources
 	@set -euo pipefail; \
@@ -174,7 +162,7 @@ build/aom-$(AOM_VERSION).done: sources/aom-$(AOM_VERSION).tar.gz ../versions/aom
 	cp PATENTS "$$target/share/licenses/aom-PATENTS"; \
 	printf '%s\n' "$(AOM_SHA256)" > "$$stamp"
 
-build/sharpyuv-$(WEBP_VERSION).done: sources/sharpyuv-$(WEBP_VERSION).tar.gz ../versions/sharpyuv.env | build/venv
+build/sharpyuv-$(WEBP_VERSION).done: sources/webp-$(WEBP_VERSION).tar.gz ../versions/webp.env | build/venv
 	@$(call prepare,$(WEBP_SHA256)) \
 	./configure \
 		--prefix="$$target" \

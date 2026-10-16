@@ -17,29 +17,51 @@ assert (headers / "heif.h").is_file()
 assert (headers / "heif_cxx.h").is_file()
 version_header = (headers / "heif_version.h").read_text()
 assert '#define LIBHEIF_PLUGIN_DIRECTORY ""' in version_header
-assert '#define LIBHEIF_VERSION "{}"'.format(libheif_binary.get_version_str()) in version_header
+assert (
+    '#define LIBHEIF_VERSION "{}"'.format(libheif_binary.get_version_str())
+    in version_header
+)
 lib = libheif_binary.load_library()
 other = libheif_binary.load_library()
 assert other is not lib
-assert ctypes.cast(other.heif_get_version, ctypes.c_void_p).value == ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value
+assert (
+    ctypes.cast(other.heif_get_version, ctypes.c_void_p).value
+    == ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value
+)
 if sys.platform == "darwin":
     version = libheif_binary.get_version_str()
     bundled = ctypes.CDLL(str(package / "lib" / f"libheif.{version}.dylib"))
-    assert ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
+    assert (
+        ctypes.cast(lib.heif_get_version, ctypes.c_void_p).value
+        == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
+    )
 else:
     resident = ctypes.CDLL("libheif.so.1", mode=os.RTLD_NOLOAD | os.RTLD_NOW)
-    bundled = ctypes.CDLL(str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW)
-    assert ctypes.cast(resident.heif_get_version, ctypes.c_void_p).value == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
+    bundled = ctypes.CDLL(
+        str(package / "lib" / "libheif.so.1"), mode=os.RTLD_NOLOAD | os.RTLD_NOW
+    )
+    assert (
+        ctypes.cast(resident.heif_get_version, ctypes.c_void_p).value
+        == ctypes.cast(bundled.heif_get_version, ctypes.c_void_p).value
+    )
 lib.heif_get_version.restype = ctypes.c_char_p
 assert lib.heif_get_version().decode() == libheif_binary.get_version_str()
 
 for name in ("heif-enc", "heif-dec", "heif-info"):
     executable = shutil.which(name)
-    assert executable and Path(executable).parent.resolve() == Path(sys.executable).parent.resolve()
+    assert (
+        executable
+        and Path(executable).parent.resolve() == Path(sys.executable).parent.resolve()
+    )
     subprocess.run([name, "--help"], check=True)
 arguments = ["--invalid-option"]
-wrapped = subprocess.run(["heif-enc", *arguments], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-native = subprocess.run([str(package / "bin" / "heif-enc"), *arguments], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+wrapped = subprocess.run(
+    ["heif-enc", *arguments], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+)
+native = subprocess.run(
+    [str(package / "bin" / "heif-enc"), *arguments],
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+)
 assert wrapped.returncode == native.returncode
 assert wrapped.stdout == native.stdout
 assert wrapped.stderr == native.stderr, (sys.executable, wrapped.stderr, native.stderr)
@@ -49,18 +71,25 @@ for name in ("heif-enc", "heif-dec", "heif-info"):
     assert executable.is_symlink()
     assert executable.resolve() == (package / "bin" / name).resolve()
     subprocess.run([name, "--help"], check=True)
-encoders = subprocess.check_output(["heif-enc", "--list-encoders"], universal_newlines=True)
+encoders = subprocess.check_output(
+    ["heif-enc", "--list-encoders"], universal_newlines=True
+)
 for encoder in ("x265", "aom", "jpeg"):
     assert encoder in encoders, encoders
 
 assert "x264" not in encoders, encoders
-decoders = subprocess.check_output(["heif-dec", "--list-decoders"], universal_newlines=True)
+decoders = subprocess.check_output(
+    ["heif-dec", "--list-decoders"], universal_newlines=True
+)
 for decoder in ("libde265", "aom", "jpeg"):
     assert decoder in decoders, decoders
 
 
 def png_chunk(kind, data):
-    return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    return (
+        struct.pack(">I", len(data)) + kind + data
+        + struct.pack(">I", zlib.crc32(kind + data))
+    )
 
 
 with tempfile.TemporaryDirectory() as directory:
@@ -69,7 +98,9 @@ with tempfile.TemporaryDirectory() as directory:
     subprocess.run(["heif-dec", sys.argv[1], str(work / "example.jpg")], check=True)
     # The upstream example contains two images; heif-dec numbers its outputs.
     for index in (1, 2):
-        assert (work / f"example-{index}.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+        assert (work / f"example-{index}.png").read_bytes().startswith(
+            b"\x89PNG\r\n\x1a\n"
+        )
         assert (work / f"example-{index}.jpg").read_bytes().startswith(b"\xff\xd8")
     png = b"\x89PNG\r\n\x1a\n"
     png += png_chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 2, 0, 0, 0))
@@ -77,23 +108,38 @@ with tempfile.TemporaryDirectory() as directory:
     png += png_chunk(b"IEND", b"")
     source = work / "input.png"
     source.write_bytes(png)
-    for suffix, options in (("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"]), ("heif", ["--jpeg", "-e", "jpeg"])):
+    for suffix, options in (
+        ("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"]),
+        ("heif", ["--jpeg", "-e", "jpeg"]),
+    ):
         encoded = work / ("encoded." + suffix)
         decoded = work / (suffix + ".png")
-        subprocess.run(["heif-enc", *options, "--chroma-downsampling", "sharp-yuv", "-o", str(encoded), str(source)], check=True)
+        subprocess.run(
+            ["heif-enc", *options, "--chroma-downsampling", "sharp-yuv",
+             "-o", str(encoded), str(source)], check=True,
+        )
         subprocess.run(["heif-dec", str(encoded), str(decoded)], check=True)
         assert struct.unpack(">II", decoded.read_bytes()[16:24]) == (16, 16)
     png = b"\x89PNG\r\n\x1a\n"
     png += png_chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 16, 2, 0, 0, 0))
-    png += png_chunk(b"IDAT", zlib.compress((b"\0" + struct.pack(">HHH", 32768, 16384, 8192) * 16) * 16))
+    png += png_chunk(
+        b"IDAT",
+        zlib.compress((b"\0" + struct.pack(">HHH", 32768, 16384, 8192) * 16) * 16),
+    )
     png += png_chunk(b"IEND", b"")
     source.write_bytes(png)
     for suffix, options in (("heic", ["-e", "x265"]), ("avif", ["-A", "-e", "aom"])):
         for depth in (10, 12):
             encoded = work / ("encoded-" + str(depth) + "." + suffix)
             decoded = work / ("decoded-" + str(depth) + "-" + suffix + ".png")
-            subprocess.run(["heif-enc", *options, "-b", str(depth), "-o", str(encoded), str(source)], check=True)
-            info = subprocess.check_output(["heif-info", str(encoded)], universal_newlines=True)
+            subprocess.run(
+                ["heif-enc", *options, "-b", str(depth), "-o",
+                 str(encoded), str(source)],
+                check=True,
+            )
+            info = subprocess.check_output(
+                ["heif-info", str(encoded)], universal_newlines=True
+            )
             assert "bit depth: " + str(depth) + "\n" in info, info
             subprocess.run(["heif-dec", str(encoded), str(decoded)], check=True)
             assert struct.unpack(">II", decoded.read_bytes()[16:24]) == (16, 16)
