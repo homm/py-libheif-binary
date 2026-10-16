@@ -41,7 +41,9 @@ class DependencyUpdatesTest(unittest.TestCase):
         result = self.run_make(["v1.6.99", "v9.0.0-rc1", "v1.6.100", "v1.6.10"])
         self.assertEqual(result.returncode, 0, result.stderr)
         checksum = hashlib.sha256(self.archive.read_bytes()).hexdigest()
-        expected = self.before.replace("LIBPNG_VERSION=1.6.9\n", "LIBPNG_VERSION=1.6.100\n")
+        expected = self.before.replace(
+            "LIBPNG_VERSION=1.6.9\n", "LIBPNG_VERSION=1.6.100\n"
+        )
         expected = expected.replace("0" * 64, checksum)
         self.assertEqual(self.pin.read_text(), expected)
 
@@ -72,7 +74,10 @@ class DependencyUpdatesTest(unittest.TestCase):
         result = self.run_make([latest], "x264.env")
         self.assertEqual(result.returncode, 0, result.stderr)
         checksum = hashlib.sha256(source.read_bytes()).hexdigest()
-        expected = before.replace(current, latest).replace("0" * 64, checksum).replace("X264_BUILD=165", "X264_BUILD=166")
+        expected = (
+            before.replace(current, latest).replace("0" * 64, checksum)
+            .replace("X264_BUILD=165", "X264_BUILD=166")
+        )
         self.assertEqual(pin.read_text(), expected)
 
     def test_failed_download_or_invalid_archive_leaves_pin_unchanged(self):
@@ -84,5 +89,7 @@ class DependencyUpdatesTest(unittest.TestCase):
                 result = self.run_make(["v1.6.100"])
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("Failed to update libpng.env:", result.stderr)
-                self.assertIn("curl -fsSL" if failure == "download" else "tar -tzf", result.stderr)
+                self.assertIn(
+                    "curl -fsSL" if failure == "download" else "tar -tzf", result.stderr
+                )
                 self.assertEqual(self.pin.read_text(), self.before)

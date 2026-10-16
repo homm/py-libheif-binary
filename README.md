@@ -160,10 +160,11 @@ The wheel targets the current architecture.
 
 ## Testing
 
-Run the unit tests from the repository root:
+Install development dependencies and run lint and unit tests from the repository root:
 
 ```sh
-pytest tests -v
+pip install --group dev
+make check
 ```
 
 To test an installed wheel, run the smoke test:
