@@ -116,6 +116,19 @@ Run it again after reinstalling or upgrading the package.
 Run the following commands from the repository root. Wheels are saved in `dist/`.
 Dependency versions and source checksums are pinned in `versions/*.env`.
 
+### Updating dependencies
+
+With Bash, `curl`, `jq`, authenticated GitHub CLI (`gh`), `tar` and `shasum`
+installed, check for stable releases and update the pinned versions and SHA-256 sums:
+
+```sh
+make -C versions
+```
+
+To check just one library, run, for example, `make -C versions libheif.env`.
+x264 is excluded from the default updates; update it explicitly with
+`make -C versions x264.env`.
+
 
 ### Linux
 
