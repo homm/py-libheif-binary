@@ -165,9 +165,9 @@ RUN --mount=type=cache,id=libheif-build-lock,target=/tmp/libheif-build-lock,shar
 # -------------------------------- build-sharpyuv --------------------------------------
 FROM build-base AS build-sharpyuv
 
-COPY versions/sharpyuv.env /build/sharpyuv.env
+COPY versions/webp.env /build/webp.env
 
-RUN . /build/sharpyuv.env \
+RUN . /build/webp.env \
     && curl -fL "${WEBP_URL}" -o ../libwebp.tar.gz \
     && echo "${WEBP_SHA256} *../libwebp.tar.gz" | sha256sum -c -
 
