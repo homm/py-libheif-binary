@@ -213,7 +213,7 @@ installed package's `libheif_binary/licenses/` directory.
 
 ### Revision 2
 
-- Bundle libheif headers with the plugin directory cleared.
+- Bundle libheif headers with `LIBHEIF_PLUGIN_DIRECTORY` set to an empty string.
 - Add `get_build_config()` and expose bundled executable paths.
 
 ### Revision 1

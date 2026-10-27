@@ -98,6 +98,7 @@ build/x264-$(X264_BUILD).done: sources/x264-$(X264_BUILD).tar.gz ../versions/x26
 	cp COPYING "$$target/share/licenses/x264-COPYING"; \
 	printf '%s\n' "$(X264_SHA256)" > "$$stamp"
 
+# Build static and shared sequentially to avoid races in assembly generation.
 build/x265-$(X265_VERSION).done: sources/x265-$(X265_VERSION).tar.gz ../versions/x265.env | build/venv
 	@$(call prepare,$(X265_SHA256)) \
 	x265_options=( \
@@ -118,7 +119,8 @@ build/x265-$(X265_VERSION).done: sources/x265-$(X265_VERSION).tar.gz ../versions
 		-DLINKED_10BIT=ON -DLINKED_12BIT=ON \
 		-DEXTRA_LIB="$$work/build-10/libx265.a;$$work/build-12/libx265.a" \
 		-DENABLE_SHARED=ON; \
-	cmake --build build -j $(JOBS); \
+	cmake --build build --target x265-static -j "$(JOBS)"; \
+	cmake --build build --target x265-shared -j "$(JOBS)"; \
 	cmake --install build; \
 	rm "$$target/lib/libx265.a"; \
 	mkdir -p "$$target/share/licenses"; \
